@@ -30,7 +30,7 @@ public static class SurfaceBuilder
         var warnings = new List<string>();
         if (chain.Exercise == ExerciseStyle.American)
         {
-            warnings.Add("Options américaines : forwards et vols approchés par un modèle européen.");
+            warnings.Add("American options: forwards and vols approximated with a European model.");
         }
 
         foreach (var group in chain.Quotes.Where(q => q.IsTwoSided).GroupBy(q => q.Expiry).OrderBy(g => g.Key))
@@ -41,14 +41,14 @@ public static class SurfaceBuilder
 
             if (ImpliedForward([.. group], chain.Spot, df) is not { } forward)
             {
-                warnings.Add($"{group.Key:yyyy-MM-dd} ignorée : parité call-put inexploitable.");
+                warnings.Add($"{group.Key:yyyy-MM-dd} skipped: put-call parity unusable.");
                 continue;
             }
 
             var points = OutOfTheMoneyVols(group, forward, t, df);
             if (points.Count < SviCalibrator.MinPoints)
             {
-                warnings.Add($"{group.Key:yyyy-MM-dd} ignorée : {points.Count} points exploitables.");
+                warnings.Add($"{group.Key:yyyy-MM-dd} skipped: only {points.Count} usable points.");
                 continue;
             }
 
@@ -62,15 +62,15 @@ public static class SurfaceBuilder
             double minDensity = Grid(ks.Min(), ks.Max()).Min(slice.ButterflyDensity);
             if (minDensity < ButterflyTolerance)
             {
-                warnings.Add($"{group.Key:yyyy-MM-dd} : arbitrage butterfly dans la zone cotée.");
+                warnings.Add($"{group.Key:yyyy-MM-dd}: butterfly arbitrage in the quoted range.");
             }
             slices.Add(new SliceReport(group.Key, slice, rmse, minDensity, [.. points.Select(p => new SmilePoint(p.Strike, p.Vol))]));
         }
 
-        if (slices.Count == 0) throw new InvalidOperationException($"{chain.Underlying} : aucune maturité calibrée.");
+        if (slices.Count == 0) throw new InvalidOperationException($"{chain.Underlying}: no expiry calibrated.");
 
         int calendar = CountCalendarViolations(slices);
-        if (calendar > 0) warnings.Add($"{calendar} paire(s) de maturités en arbitrage calendaire.");
+        if (calendar > 0) warnings.Add($"{calendar} expiry pair(s) in calendar arbitrage.");
 
         var surface = new SviVolSurface([.. slices.Select(s => s.Slice)]);
         var carry = new YieldCurve(

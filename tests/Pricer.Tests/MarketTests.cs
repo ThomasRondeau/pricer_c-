@@ -84,7 +84,7 @@ public class MarketTests
     public void AmericanChainCarriesWarning()
     {
         var result = SurfaceBuilder.Build(Chain() with { Exercise = ExerciseStyle.American }, Curve);
-        Assert.Contains(result.Report.Warnings, w => w.Contains("américaines"));
+        Assert.Contains(result.Report.Warnings, w => w.Contains("American options"));
     }
 
     [Fact]
@@ -209,7 +209,7 @@ public class MarketTests
             var settings = new CaptureSettings { Watchlist = [new ChainRequest("SYNTH")] };
             var outcome = await new SnapshotCapture(new SyntheticOptionChainSource(), new SnapshotStore(path))
                 .RunAsync(settings, Today, null, default);
-            Assert.Contains(outcome.Reports[0].Warnings, w => w.Contains("Courbe de discount"));
+            Assert.Contains(outcome.Reports[0].Warnings, w => w.Contains("Default discount curve"));
         }
         finally
         {

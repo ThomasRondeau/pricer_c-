@@ -7,7 +7,7 @@ namespace Pricer.Core;
 public sealed class ParameterAttribute(string label) : Attribute
 {
     public string Label { get; } = label;
-    public string Group { get; init; } = "Général";
+    public string Group { get; init; } = "General";
     public string Unit { get; init; } = "";
     public double Min { get; init; } = double.NaN;
     public double Max { get; init; } = double.NaN;

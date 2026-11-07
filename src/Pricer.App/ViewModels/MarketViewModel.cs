@@ -63,13 +63,13 @@ public sealed partial class MarketViewModel : ObservableObject
             var today = DateOnly.FromDateTime(DateTime.Today);
             var outcome = await Task.Run(() => capture.RunAsync(settings, today, progress, token), token);
             Status = outcome.Failures.Length == 0
-                ? $"Snapshot {outcome.SnapshotId} enregistré."
-                : $"Snapshot {outcome.SnapshotId} partiel. {string.Join(" ", outcome.Failures)}";
+                ? $"Snapshot {outcome.SnapshotId} saved."
+                : $"Snapshot {outcome.SnapshotId} partial. {string.Join(" ", outcome.Failures)}";
             Reload();
         }
         catch (OperationCanceledException)
         {
-            Status = "Capture annulée.";
+            Status = "Capture cancelled.";
         }
         catch (Exception e) when (e is InvalidOperationException or IOException or TimeoutException)
         {

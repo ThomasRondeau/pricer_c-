@@ -130,7 +130,7 @@ public class BookTests : IDisposable
 
         Assert.Null(run.Trades[0].Error);
         Assert.Contains("NOPE", run.Trades[1].Error);
-        Assert.Contains("Fixing manquant", run.Trades[2].Error);
+        Assert.Contains("Missing fixing", run.Trades[2].Error);
 
         var total = BookAggregator.Group(run.Trades, BookGrouping.Total)[0];
         Assert.Equal(2, total.Failed);
@@ -143,7 +143,7 @@ public class BookTests : IDisposable
     {
         var american = new AmericanOption { Underlying = A, Right = OptionRight.Put, Strike = 100, Expiry = Today.AddYears(1) };
         var run = await Run([new Position("x", american, 1, Model: ModelChoice.Heston)]);
-        Assert.Contains("Pas de moteur", run.Trades[0].Error);
+        Assert.Contains("No engine", run.Trades[0].Error);
     }
 
     [Fact]
@@ -238,9 +238,9 @@ public class BookTests : IDisposable
         Assert.Contains(Trade("call").Causes, c => c.StartsWith("Strike"));
         Assert.Contains(Trade("call").Causes, c => c.StartsWith("Spot A"));
         Assert.Contains(Trade("call").Causes, c => c.StartsWith("Vol A"));
-        Assert.Equal("Trade retiré", Assert.Single(Trade("gone").Causes));
-        Assert.Equal("Trade ajouté", Assert.Single(Trade("new").Causes));
-        Assert.Contains(comparison.ConfigChanges, c => c.StartsWith("Scénario : choc de vol"));
+        Assert.Equal("Trade removed", Assert.Single(Trade("gone").Causes));
+        Assert.Equal("Trade added", Assert.Single(Trade("new").Causes));
+        Assert.Contains(comparison.ConfigChanges, c => c.StartsWith("Scenario: vol shock"));
         Assert.Contains(Trade("same").Causes, c => c.StartsWith("Vol B"));
         Assert.Equal(comparison.RightPv - comparison.LeftPv, comparison.Trades.Sum(t => t.Change), 8);
     }

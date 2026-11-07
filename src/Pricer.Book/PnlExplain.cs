@@ -40,14 +40,14 @@ public enum PnlOrdering
 
 public sealed record PnlConfig
 {
-    [Parameter("Passage du temps", Group = "PnL")]
+    [Parameter("Time roll", Group = "PnL")]
     public PnlTimeRoll Roll { get; init; } = PnlTimeRoll.Forward;
 
     /// <summary>The attribution depends on the order; the total does not.</summary>
-    [Parameter("Ordre des facteurs", Group = "PnL")]
+    [Parameter("Factor order", Group = "PnL")]
     public PnlOrdering Ordering { get; init; } = PnlOrdering.SpotVolRates;
 
-    [Parameter("Séparer niveau et forme de la vol", Group = "PnL")]
+    [Parameter("Split vol level and shape", Group = "PnL")]
     public bool SplitVol { get; init; } = true;
 
     public ImmutableArray<PnlFactor> Sequence => Ordering switch
@@ -113,7 +113,7 @@ public sealed class PnlExplainer(EngineRegistry registry)
         RunResult left, MarketSnapshot leftSnapshot, RunResult right, MarketSnapshot rightSnapshot, PnlConfig config,
         IProgress<RunProgress>? progress, CancellationToken token)
     {
-        if (right.Valuation < left.Valuation) throw new ArgumentException("Le run final précède le run initial.");
+        if (right.Valuation < left.Valuation) throw new ArgumentException("The final run precedes the initial run.");
 
         var start = left.Config.Shocked(leftSnapshot);
         var end = right.Config.Shocked(rightSnapshot);
@@ -145,11 +145,11 @@ public sealed class PnlExplainer(EngineRegistry registry)
     private static ImmutableArray<string> Warnings(RunResult left, RunResult right)
     {
         var warnings = new List<string>();
-        if (left.CodeVersion != right.CodeVersion) warnings.Add("Versions de code différentes : l'écart de modèle part dans le résiduel.");
+        if (left.CodeVersion != right.CodeVersion) warnings.Add("Different code versions: the model gap goes into the residual.");
         var (a, b) = (left.Config with { SpotShock = 0, VolShock = 0 }, right.Config with { SpotShock = 0, VolShock = 0 });
-        if (ContentHash.Of(a) != ContentHash.Of(b)) warnings.Add("Configurations différentes : l'écart de méthode part dans le résiduel.");
+        if (ContentHash.Of(a) != ContentHash.Of(b)) warnings.Add("Different configurations: the method gap goes into the residual.");
         int failed = left.Trades.Concat(right.Trades).Count(t => t.Error is not null);
-        if (failed > 0) warnings.Add($"{failed} résultats en échec dans les runs : ces trades ne sont pas expliqués.");
+        if (failed > 0) warnings.Add($"{failed} failed results in the runs: these trades are not explained.");
         return [.. warnings];
     }
 
@@ -277,7 +277,7 @@ public sealed class PnlExplainer(EngineRegistry registry)
     }
 
     private static TradeExplain Failed(Position position, string? error) =>
-        new(position.Id, position, 0, [.. new double[Factors]], [.. new double[Factors]], error ?? "Échec");
+        new(position.Id, position, 0, [.. new double[Factors]], [.. new double[Factors]], error ?? "Failed");
 
     private static TradeExplain New(TradeResult trade)
     {

@@ -78,19 +78,19 @@ public sealed class SnapshotCapture(IOptionChainSource source, SnapshotStore sto
                 var built = SurfaceBuilder.Build(chain, settings.DiscountCurve);
                 var report = settings.DiscountCurveConfirmed
                     ? built.Report
-                    : built.Report with { Warnings = built.Report.Warnings.Add("Courbe de discount par défaut, non confirmée.") };
+                    : built.Report with { Warnings = built.Report.Warnings.Add("Default discount curve, not confirmed.") };
                 reports.Add(report);
                 underlyings = underlyings.SetItem(request.Symbol, built.Market);
             }
             catch (Exception e) when (e is InvalidOperationException or TimeoutException or IOException)
             {
-                failures.Add($"{request.Symbol} : {e.Message}");
+                failures.Add($"{request.Symbol}: {e.Message}");
             }
         }
 
         if (chains.Count == 0)
         {
-            throw new InvalidOperationException("Aucune chaîne capturée. " + string.Join(" ", failures));
+            throw new InvalidOperationException("No chain captured. " + string.Join(" ", failures));
         }
         // Raw chains are saved even when calibration failed: they cannot be fetched again.
         var marketDate = chains.Max(c => c.AsOf);

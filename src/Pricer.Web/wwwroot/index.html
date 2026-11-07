@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Equity derivatives pricer written in C#: Black-Scholes, local vol and Heston, analytic, PDE and Monte Carlo engines, running entirely in the browser with WebAssembly." />
+    <title>Equity Pricer</title>
+    <base href="/" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/app.css" />
+</head>
+
+<body>
+    <div id="app">
+        <div class="boot">
+            <div class="boot-title">Equity Pricer</div>
+            <div class="boot-text">Loading the .NET runtime and pricing library <span class="boot-progress"></span></div>
+            <div class="boot-bar"><div class="boot-fill"></div></div>
+            <div class="boot-note">First visit downloads the compiled engine once; later visits load from cache.</div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unexpected error occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss" role="button" aria-label="Dismiss">×</span>
+    </div>
+    <script src="lib/chartjs/chart.umd.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

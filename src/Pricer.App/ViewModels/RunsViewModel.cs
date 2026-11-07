@@ -56,7 +56,7 @@ public sealed partial class RunsViewModel : ObservableObject
         foreach (string change in comparison.ConfigChanges) ConfigChanges.Add(change);
         foreach (var trade in comparison.Trades) Trades.Add(trade);
         Summary = $"PV {comparison.LeftPv:N2} → {comparison.RightPv:N2} ({comparison.RightPv - comparison.LeftPv:+#,0.00;-#,0.00;0}), "
-            + $"{comparison.Trades.Length} trades différents.";
+            + $"{comparison.Trades.Length} trades differ.";
         SelectedTrade = Trades.FirstOrDefault();
     }
 }

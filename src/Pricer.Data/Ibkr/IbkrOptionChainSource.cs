@@ -28,11 +28,11 @@ public sealed class IbkrOptionChainSource(CaptureSettings settings) : IOptionCha
         };
         int conId = await connection.ContractIdAsync(underlying, LookupTimeout, token);
         double spot = Spot(await connection.SnapshotAsync(underlying, QuoteTimeout, token), request.Symbol);
-        progress?.Report($"{request.Symbol} : spot {spot:F2}");
+        progress?.Report($"{request.Symbol}: spot {spot:F2}");
 
         var parameters = await connection.OptionParametersAsync(request.Symbol, request.SecType, conId, LookupTimeout, token);
         var contracts = SelectContracts(request, parameters, spot, asOf);
-        progress?.Report($"{request.Symbol} : {contracts.Count} options à coter");
+        progress?.Report($"{request.Symbol}: {contracts.Count} options to quote");
 
         using var gate = new SemaphoreSlim(MaxConcurrent);
         int done = 0;
@@ -50,7 +50,7 @@ public sealed class IbkrOptionChainSource(CaptureSettings settings) : IOptionCha
             {
                 var ticks = await connection.SnapshotAsync(contract, QuoteTimeout, token);
                 int count = Interlocked.Increment(ref done);
-                if (count % 50 == 0) progress?.Report($"{request.Symbol} : {count}/{contracts.Count}");
+                if (count % 50 == 0) progress?.Report($"{request.Symbol}: {count}/{contracts.Count}");
                 if (ticks.Bid <= 0 || ticks.Ask <= 0) return null;
                 var expiry = DateOnly.ParseExact(contract.LastTradeDateOrContractMonth, DateFormat, CultureInfo.InvariantCulture);
                 return new OptionQuote(expiry, contract.Strike, contract.Right == "C", ticks.Bid, ticks.Ask);
@@ -65,9 +65,9 @@ public sealed class IbkrOptionChainSource(CaptureSettings settings) : IOptionCha
         if (quotes.Count == 0)
         {
             throw new InvalidOperationException(
-                $"{request.Symbol} : aucune cote bid/ask reçue sur {contracts.Count} options (marché fermé ou données non autorisées).");
+                $"{request.Symbol}: no bid/ask received on {contracts.Count} options (market closed or data not permitted).");
         }
-        progress?.Report($"{request.Symbol} : {quotes.Count}/{contracts.Count} cotes reçues");
+        progress?.Report($"{request.Symbol}: {quotes.Count}/{contracts.Count} quotes received");
         return new OptionChain(request.Symbol, asOf, spot, request.Exercise, [.. quotes]);
     }
 
@@ -76,14 +76,14 @@ public sealed class IbkrOptionChainSource(CaptureSettings settings) : IOptionCha
         if (ticks.Bid > 0 && ticks.Ask > 0) return (ticks.Bid + ticks.Ask) / 2;
         if (ticks.Last > 0) return ticks.Last;
         if (ticks.Close > 0) return ticks.Close;
-        throw new InvalidOperationException($"{symbol} : aucun prix reçu pour le sous-jacent.");
+        throw new InvalidOperationException($"{symbol}: no price received for the underlying.");
     }
 
     private static List<Contract> SelectContracts(
         ChainRequest request, IReadOnlyList<OptionParameters> parameters, double spot, DateOnly asOf)
     {
         var smart = parameters.Where(p => p.Exchange == "SMART" && p.Multiplier == "100").ToList();
-        if (smart.Count == 0) throw new InvalidOperationException($"{request.Symbol} : pas de chaîne SMART.");
+        if (smart.Count == 0) throw new InvalidOperationException($"{request.Symbol}: no SMART chain.");
 
         // The same expiry can exist in several trading classes (SPX, SPXW): prefer the standard one.
         var expiries = smart.OrderBy(p => p.TradingClass == request.Symbol ? 1 : 0)

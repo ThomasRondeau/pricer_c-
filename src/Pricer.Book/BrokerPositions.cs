@@ -67,9 +67,9 @@ public static class BrokerImport
 
 public static class DemoBook
 {
-    private const string Vanilla = "Vanilles";
-    private const string Exotic = "Exotiques";
-    private const string Note = "Structurés";
+    private const string Vanilla = "Vanillas";
+    private const string Exotic = "Exotics";
+    private const string Note = "Structured";
 
     /// <summary>A small book on the snapshot's underlyings, to try the screens with no broker position.</summary>
     public static ImmutableArray<Position> For(MarketSnapshot snapshot, string underlying)

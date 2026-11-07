@@ -1,0 +1,83 @@
+@* Generic editor built from a record's [Parameter] metadata: a new parameter shows up without any page change. *@
+@using System.Globalization
+@using Pricer.Presentation
+
+<fieldset class="form-card">
+    <legend>@Form.Title</legend>
+    @foreach (var field in Form.Fields)
+    {
+        switch (field)
+        {
+            case NumberField number:
+                <label class="field">
+                    <span class="field-label">@number.Label</span>
+                    <span class="field-input">
+                        @if (HasRange(number))
+                        {
+                            <input type="range" min="@Text(number.Min)" max="@Text(number.Max)" step="@Step(number)"
+                                   value="@Text(number.Value)" @oninput="e => Set(number, e.Value)" aria-label="@number.Label" />
+                        }
+                        <input type="number" class="number" step="any" value="@Text(number.Value)"
+                               @onchange="e => Set(number, e.Value)" aria-label="@number.Label" />
+                    </span>
+                </label>
+                break;
+            case ChoiceField choice:
+                <label class="field">
+                    <span class="field-label">@choice.Label</span>
+                    <select @onchange="e => Choose(choice, e.Value)">
+                        @foreach (var option in choice.Choices)
+                        {
+                            <option value="@option.ToString()" selected="@option.Equals(choice.Value)">@Spaced(option.ToString()!)</option>
+                        }
+                    </select>
+                </label>
+                break;
+            case BoolField flag:
+                <label class="field checkbox">
+                    <span class="field-label">@flag.Label</span>
+                    <input type="checkbox" checked="@flag.Value" @onchange="e => flag.Value = e.Value is true" />
+                </label>
+                break;
+            case DateField date:
+                <label class="field">
+                    <span class="field-label">@date.Label</span>
+                    <input type="date" value="@date.Value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
+                           @onchange="e => SetDate(date, e.Value)" />
+                </label>
+                break;
+        }
+    }
+</fieldset>
+
+@code {
+    private const int SliderSteps = 200;
+
+    [Parameter, EditorRequired] public ParameterForm Form { get; set; } = default!;
+
+    private static bool HasRange(NumberField field) => double.IsFinite(field.Min) && double.IsFinite(field.Max) && field.Max > field.Min;
+
+    private static string Text(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+
+    /// <summary>Integer fields step by one; others get a fine step relative to their range.</summary>
+    private static string Step(NumberField field) =>
+        field.Value == Math.Round(field.Value) && field.Max - field.Min >= SliderSteps ? "1" : Text((field.Max - field.Min) / SliderSteps);
+
+    private static void Set(NumberField field, object? value)
+    {
+        if (double.TryParse(value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double number)) field.Value = number;
+    }
+
+    private static void Choose(ChoiceField field, object? value)
+    {
+        if (value?.ToString() is { } name) field.Value = Enum.Parse(field.Value.GetType(), name);
+    }
+
+    private static void SetDate(DateField field, object? value)
+    {
+        if (DateTime.TryParseExact(value?.ToString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)) field.Value = date;
+    }
+
+    /// <summary>"DownOut" reads as "Down Out".</summary>
+    public static string Spaced(string name) => System.Text.RegularExpressions.Regex.Replace(name, "(?<=[a-z])(?=[A-Z])", " ");
+}

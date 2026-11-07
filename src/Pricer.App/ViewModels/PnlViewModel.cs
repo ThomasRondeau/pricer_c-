@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Pricer.Presentation;
 using Pricer.Book;
 using Pricer.Data;
 using Pricer.Engines;
@@ -70,7 +71,7 @@ public sealed partial class PnlViewModel : ObservableObject
     {
         if (From is not { } from || To is not { } to)
         {
-            Status = "Il faut deux runs.";
+            Status = "Two runs are required.";
             return;
         }
 
@@ -88,11 +89,11 @@ public sealed partial class PnlViewModel : ObservableObject
             _explain = explain;
             Warnings = string.Join(Environment.NewLine, explain.Warnings);
             Refresh();
-            Status = $"Du {explain.From:dd/MM/yyyy} au {explain.To:dd/MM/yyyy}, {explain.Trades.Length} trades.";
+            Status = $"From {explain.From:yyyy-MM-dd} to {explain.To:yyyy-MM-dd}, {explain.Trades.Length} trades.";
         }
         catch (OperationCanceledException)
         {
-            Status = "Explain annulé.";
+            Status = "Explain cancelled.";
         }
         catch (ArgumentException e)
         {
@@ -120,11 +121,11 @@ public sealed partial class PnlViewModel : ObservableObject
         if (_explain is null) return;
 
         var total = PnlAggregator.Row("Book", _explain.Trades);
-        Summary = $"PnL {total.Total:N2}, résiduel {total[PnlFactor.Residual]:N2} en réévaluation complète, "
-            + $"{total.Greeks[(int)PnlFactor.Residual]:N2} par les grecques.";
+        Summary = $"PnL {total.Total:N2}, residual {total[PnlFactor.Residual]:N2} in full revaluation, "
+            + $"{total.Greeks[(int)PnlFactor.Residual]:N2} from greeks.";
         foreach (var row in PnlAggregator.Group(_explain.Trades, Grouping))
         {
-            Groups.Add(new PnlLine(row.Key, row, row.Failed == 0 ? "" : $"{row.Failed} en échec"));
+            Groups.Add(new PnlLine(row.Key, row, row.Failed == 0 ? "" : $"{row.Failed} failed"));
         }
         SelectedGroup = Groups.FirstOrDefault();
     }

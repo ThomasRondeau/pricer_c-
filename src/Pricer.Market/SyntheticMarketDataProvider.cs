@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
-using Pricer.Market;
 
-namespace Pricer.Data;
+namespace Pricer.Market;
 
 public interface IMarketDataProvider
 {

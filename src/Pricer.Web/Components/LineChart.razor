@@ -1,0 +1,43 @@
+@* Thin wrapper over Chart.js: the series are drawn on a canvas by wwwroot/js/charts.js. *@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="chart" style="height: @(Height)px">
+    <canvas @ref="_canvas" role="img" aria-label="@Title"></canvas>
+</div>
+
+@code {
+    private ElementReference _canvas;
+    private object? _drawn;
+
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string XLabel { get; set; } = "";
+    [Parameter] public string YLabel { get; set; } = "";
+    [Parameter] public int Height { get; set; } = 320;
+    [Parameter, EditorRequired] public IReadOnlyList<ChartSeries> Series { get; set; } = [];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Redraw only when the caller hands over new series, not on every parent render.
+        if (ReferenceEquals(_drawn, Series)) return;
+        _drawn = Series;
+        var series = Series.Select(s => new
+        {
+            name = s.Name,
+            points = s.X.Zip(s.Y, (x, y) => new { x, y = double.IsFinite(y) ? y : (double?)null }).ToArray(),
+            markers = s.Markers,
+        });
+        await JS.InvokeVoidAsync("pricerCharts.render", _canvas, new { title = Title, xLabel = XLabel, yLabel = YLabel, series });
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("pricerCharts.dispose", _canvas);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+}

@@ -352,7 +352,7 @@ public class StructuredTests
     {
         var note = AutocallNote() with { Start = Today.AddMonths(-4) };
         var error = Assert.Throws<InvalidOperationException>(() => Price(note, new BlackScholesConfig(), Mc));
-        Assert.Contains("Fixing manquant", error.Message);
+        Assert.Contains("Missing fixing", error.Message);
     }
 
     [Fact]

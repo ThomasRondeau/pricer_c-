@@ -65,7 +65,7 @@ public sealed class EngineRegistry
         _engines.TryGetValue((instrument.GetType(), model.GetType(), config.GetType()), out var engine)
             ? engine
             : throw new NotSupportedException(
-                $"Pas de moteur pour {instrument.GetType().Name} sous {model.GetType().Name} avec {config.GetType().Name}.");
+                $"No engine for {instrument.GetType().Name} under {model.GetType().Name} with {config.GetType().Name}.");
 
     /// <summary>Engine configurations available for a product, for the screen's engine choice.</summary>
     public IReadOnlyList<Type> ConfigsFor(Type instrument, Type model) =>

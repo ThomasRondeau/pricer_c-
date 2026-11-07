@@ -39,7 +39,7 @@ public sealed class YahooOptionChainSource : IOptionChainSource, IDisposable
             .ToDictionary(q => q.GetProperty("symbol").GetString()!, q => q.GetProperty("regularMarketPrice").GetDouble());
 
         var pillars = Treasuries.Where(x => yields.ContainsKey(x.Symbol)).ToArray();
-        if (pillars.Length == 0) throw new InvalidOperationException("Yahoo : aucun taux Treasury reçu.");
+        if (pillars.Length == 0) throw new InvalidOperationException("Yahoo: no Treasury rate received.");
         return settings with
         {
             Watchlist = settings.YahooWatchlist,
@@ -61,7 +61,7 @@ public sealed class YahooOptionChainSource : IOptionChainSource, IDisposable
         double spot = quote.GetProperty("regularMarketPrice").GetDouble();
         // Outside market hours the quotes are the last close: pricing them as of today would shift every maturity.
         var marketDate = Date(quote.GetProperty("regularMarketTime").GetInt64());
-        progress?.Report($"{request.Symbol} : spot {spot:F2} au {marketDate:yyyy-MM-dd}");
+        progress?.Report($"{request.Symbol}: spot {spot:F2} on {marketDate:yyyy-MM-dd}");
 
         var listed = root.GetProperty("expirationDates").EnumerateArray().Select(e => e.GetInt64())
             .ToDictionary(Date, e => e);
@@ -73,12 +73,12 @@ public sealed class YahooOptionChainSource : IOptionChainSource, IDisposable
             double t = (expiry.DayNumber - marketDate.DayNumber) / 365.0;
             quotes.AddRange(ParseQuotes(ChainRoot(page, request.Symbol), expiry)
                 .Where(q => ChainFilter.IsNearSpot(q.Strike, spot, t)));
-            progress?.Report($"{request.Symbol} : {expiry:yyyy-MM-dd}, {quotes.Count} cotes");
+            progress?.Report($"{request.Symbol}: {expiry:yyyy-MM-dd}, {quotes.Count} quotes");
         }
 
         if (!quotes.Any(q => q.IsTwoSided))
         {
-            throw new InvalidOperationException($"{request.Symbol} : aucune cote bid/ask (marché fermé ou cotes vides).");
+            throw new InvalidOperationException($"{request.Symbol}: no bid/ask quote (market closed or empty quotes).");
         }
         return new OptionChain(request.Symbol, marketDate, spot, request.Exercise, [.. quotes]);
     }
@@ -107,7 +107,7 @@ public sealed class YahooOptionChainSource : IOptionChainSource, IDisposable
         var results = document.RootElement.GetProperty("optionChain").GetProperty("result");
         return results.GetArrayLength() > 0
             ? results[0]
-            : throw new InvalidOperationException($"{symbol} : symbole inconnu de Yahoo.");
+            : throw new InvalidOperationException($"{symbol}: symbol unknown to Yahoo.");
     }
 
     private async Task<JsonDocument> GetAsync(string url, CancellationToken token)
@@ -122,15 +122,15 @@ public sealed class YahooOptionChainSource : IOptionChainSource, IDisposable
         }
         catch (HttpRequestException e)
         {
-            throw new InvalidOperationException($"Yahoo injoignable : {e.Message}", e);
+            throw new InvalidOperationException($"Yahoo unreachable: {e.Message}", e);
         }
         catch (JsonException e)
         {
-            throw new InvalidOperationException($"Réponse Yahoo illisible : {e.Message}", e);
+            throw new InvalidOperationException($"Unreadable Yahoo response: {e.Message}", e);
         }
         catch (TaskCanceledException e) when (!token.IsCancellationRequested)
         {
-            throw new TimeoutException("Yahoo ne répond pas.", e);
+            throw new TimeoutException("Yahoo is not responding.", e);
         }
     }
 

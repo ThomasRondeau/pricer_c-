@@ -21,7 +21,7 @@ public sealed class SyntheticOptionChainSource(int seed = 7) : IOptionChainSourc
     private const double DividendYield = 0.02;
     private static readonly int[] Days = [30, 60, 90, 180, 365, 730];
 
-    public string Name => "Synthétique";
+    public string Name => "Synthetic";
 
     public static SviSlice TrueSlice(double t, double forward)
     {

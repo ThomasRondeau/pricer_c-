@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using Pricer.Presentation;
 using Pricer.App.ViewModels;
 using Pricer.Book;
 using Pricer.Market;
@@ -33,7 +34,7 @@ public partial class MainWindow : Window
         var plot = ProfilePlot.Plot;
         plot.Clear();
         plot.Add.ScatterLine(profile.Spots, profile.Values).LineWidth = 2;
-        plot.Title("PV en fonction du spot");
+        plot.Title("PV vs spot");
         plot.XLabel("Spot");
         plot.YLabel("PV");
         plot.Axes.AutoScale();
@@ -50,14 +51,14 @@ public partial class MainWindow : Window
         var plot = SmilePlot.Plot;
         plot.Clear();
         var points = plot.Add.ScatterPoints(strikes, market);
-        points.LegendText = "Marché";
+        points.LegendText = "Market";
         var line = plot.Add.ScatterLine(strikes, fit);
         line.LineWidth = 2;
         line.LegendText = "SVI";
         plot.ShowLegend();
         plot.Title($"Smile {report.Expiry:yyyy-MM-dd}");
         plot.XLabel("Strike");
-        plot.YLabel("Vol implicite (%)");
+        plot.YLabel("Implied vol (%)");
         plot.Axes.AutoScale();
         SmilePlot.Refresh();
     }
@@ -68,12 +69,12 @@ public partial class MainWindow : Window
         var plot = ModelPlot.Plot;
         plot.Clear();
         var points = plot.Add.ScatterPoints(strikes, [.. fit.Points.Select(p => p.Market * 100)]);
-        points.LegendText = "Marché";
+        points.LegendText = "Market";
         foreach (var (name, values) in new (string, IEnumerable<double>)[]
         {
             ("SVI", fit.Points.Select(p => p.Svi)),
             ("Heston", fit.Points.Select(p => p.Heston)),
-            ("Vol locale (PDE)", fit.Points.Select(p => p.LocalVol)),
+            ("Local vol (PDE)", fit.Points.Select(p => p.LocalVol)),
         })
         {
             var line = plot.Add.ScatterLine(strikes, [.. values.Select(v => v * 100)]);
@@ -83,7 +84,7 @@ public partial class MainWindow : Window
         plot.ShowLegend();
         plot.Title($"Smile {fit.Expiry:yyyy-MM-dd}");
         plot.XLabel("Strike");
-        plot.YLabel("Vol implicite (%)");
+        plot.YLabel("Implied vol (%)");
         plot.Axes.AutoScale();
         ModelPlot.Refresh();
     }
@@ -115,7 +116,7 @@ public partial class MainWindow : Window
 
         plot.Add.Bars(bars);
         plot.Axes.Bottom.TickGenerator = new ScottPlot.TickGenerators.NumericManual([.. ticks]);
-        plot.Title($"Waterfall : {row.Key}");
+        plot.Title($"Waterfall: {row.Key}");
         plot.YLabel("PnL");
         plot.Axes.AutoScale();
         PnlPlot.Refresh();
@@ -164,7 +165,7 @@ public partial class MainWindow : Window
         var brush = new LinearGradientBrush(Colors.SteelBlue, Colors.Goldenrod, new Point(0, 0), new Point(1, 0));
         var material = new DiffuseMaterial(brush);
         SurfaceModel.Content = new GeometryModel3D(mesh, material) { BackMaterial = material };
-        SurfaceCaption.Text = $"X : ln(K/F) ±{MaxLogMoneyness} · Y : maturité {minT:F2} à {maxT:F2} ans · Z : vol {low:P1} à {high:P1}";
+        SurfaceCaption.Text = $"X: ln(K/F) ±{MaxLogMoneyness} · Y: maturity {minT:F2} to {maxT:F2} y · Z: vol {low:P1} to {high:P1}";
         SurfaceView.ZoomExtents();
     }
 }

@@ -1,0 +1,127 @@
+@page "/model-lab"
+@inherits ViewModelComponent<Pricer.Presentation.ModelLabViewModel>
+@inject DemoSession Session
+@using Pricer.Presentation
+@using Pricer.Risk
+
+<PageTitle>Model Lab · Equity Pricer</PageTitle>
+
+<section class="intro">
+    <h1>Model Lab</h1>
+    <p>
+        The quoted smile of each expiry is repriced under three models and read back as implied vols:
+        the SVI fit of the market, Heston (semi-analytic) and local vol (Dupire, through the PDE).
+        Calibrate Heston to the whole surface, or edit its parameters by hand, then compare the fits.
+        A calibrated Heston is picked up by the Pricer page.
+    </p>
+</section>
+
+<div class="workspace">
+    <aside class="inputs">
+        <div class="actions">
+            <button class="primary" @onclick="() => ViewModel.CalibrateCommand.ExecuteAsync(null)" disabled="@ViewModel.IsBusy">Calibrate Heston</button>
+            <button @onclick="() => ViewModel.CompareCommand.ExecuteAsync(null)" disabled="@ViewModel.IsBusy">Compare models</button>
+        </div>
+        <p class="muted small">@ViewModel.MarketLabel</p>
+        <ParameterFormView Form="ViewModel.HestonForm" />
+        <ParameterFormView Form="ViewModel.LocalVolForm" />
+    </aside>
+
+    <section class="results">
+        <div class="pv-card" aria-live="polite">
+            <div class="pv-status">
+                @if (ViewModel.IsBusy)
+                {
+                    <span class="busy">Computing…</span>
+                }
+                <span class="muted">@(ViewModel.Status.Length > 0 ? ViewModel.Status : "Press Compare models to fit the smile of each expiry.")</span>
+            </div>
+        </div>
+
+        <h2>Fit error by expiry <span class="muted small">(RMSE in implied vol points, click a row to plot it)</span></h2>
+        <div class="table-wrap">
+            <table class="selectable">
+                <thead>
+                    <tr><th>Expiry</th><th class="num">T</th><th class="num">SVI</th><th class="num">Heston</th><th class="num">Local vol</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in ViewModel.Slices)
+                    {
+                        <tr class="@(ReferenceEquals(row, ViewModel.SelectedSlice) ? "selected" : "")" @onclick="() => ViewModel.SelectedSlice = row"
+                            tabindex="0" @onkeydown="e => Select(e, row)">
+                            <td>@row.Expiry</td>
+                            <td class="num">@row.T.ToString("F3")</td>
+                            <td class="num">@row.Svi.ToString("F2")</td>
+                            <td class="num">@row.Heston.ToString("F2")</td>
+                            <td class="num">@row.LocalVol.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <h2>Smile</h2>
+        @if (_smile.Count > 0)
+        {
+            <LineChart Title="@_title" XLabel="Strike" YLabel="Implied vol (%)" Series="_smile" />
+        }
+        else
+        {
+            <div class="placeholder muted">The smile of the selected expiry appears here once the models are compared.</div>
+        }
+    </section>
+</div>
+
+@code {
+    private IReadOnlyList<ChartSeries> _smile = [];
+    private string _title = "";
+    private SliceFit? _shown;
+
+    protected override ModelLabViewModel ViewModel => Session.ModelLab;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Session.Changed += OnSession;
+    }
+
+    protected override void OnParametersSet() => UpdateSmile();
+
+    private void OnSession() => _ = InvokeAsync(() =>
+    {
+        UpdateSmile();
+        StateHasChanged();
+    });
+
+    private void Select(KeyboardEventArgs e, ModelFitRow row)
+    {
+        if (e.Key is "Enter" or " ") ViewModel.SelectedSlice = row;
+    }
+
+    private void UpdateSmile()
+    {
+        if (ReferenceEquals(Session.Fit, _shown)) return;
+        _shown = Session.Fit;
+        if (Session.Fit is not { } fit)
+        {
+            _smile = [];
+            _title = "";
+            return;
+        }
+        double[] strikes = [.. fit.Points.Select(p => p.Strike)];
+        _title = $"Smile {fit.Expiry:yyyy-MM-dd}";
+        _smile =
+        [
+            new ChartSeries("Market", strikes, [.. fit.Points.Select(p => p.Market * 100)], Markers: true),
+            new ChartSeries("SVI", strikes, [.. fit.Points.Select(p => p.Svi * 100)]),
+            new ChartSeries("Heston", strikes, [.. fit.Points.Select(p => p.Heston * 100)]),
+            new ChartSeries("Local vol (PDE)", strikes, [.. fit.Points.Select(p => p.LocalVol * 100)]),
+        ];
+    }
+
+    public override void Dispose()
+    {
+        Session.Changed -= OnSession;
+        base.Dispose();
+    }
+}

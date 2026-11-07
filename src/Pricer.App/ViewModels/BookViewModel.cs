@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Pricer.Presentation;
 using Pricer.Book;
 using Pricer.Data;
 using Pricer.Data.Ibkr;
@@ -41,7 +42,7 @@ public sealed partial class BookViewModel : ObservableObject
     [ObservableProperty] private BookGrouping _grouping = BookGrouping.Underlying;
     [ObservableProperty] private string _filter = "";
     [ObservableProperty] private PositionRow? _selectedPosition;
-    [ObservableProperty] private string _marketLabel = "Sélectionnez un snapshot dans l'onglet Market.";
+    [ObservableProperty] private string _marketLabel = "Select a snapshot in the Market tab.";
     [ObservableProperty] private string _status = "";
     [ObservableProperty] private double _progress;
 
@@ -62,8 +63,8 @@ public sealed partial class BookViewModel : ObservableObject
         new("Run", new RunConfig()),
         new("Monte Carlo", new MonteCarloEngineConfig()),
         new("PDE", new PdeEngineConfig()),
-        new("Vol locale", new LocalVolConfig()),
-        new("Risque (bump imposé, conventions de marché)", new RiskConfig()),
+        new("Local vol", new LocalVolConfig()),
+        new("Risk (forced bump, market conventions)", new RiskConfig()),
     ];
 
     public void Use(long snapshotId, MarketSnapshot snapshot, string underlying, string source)
@@ -71,14 +72,14 @@ public sealed partial class BookViewModel : ObservableObject
         _snapshotId = snapshotId;
         _snapshot = snapshot;
         _underlying = underlying;
-        MarketLabel = $"Snapshot {snapshotId} · {source} · {snapshot.AsOf:dd/MM/yyyy}";
+        MarketLabel = $"Snapshot {snapshotId} · {source} · {snapshot.AsOf:yyyy-MM-dd}";
     }
 
     public void Add(Position position)
     {
         _store.Save([position]);
         Reload();
-        Status = $"{position.Id} ajouté au book.";
+        Status = $"{position.Id} added to the book.";
     }
 
     private RunConfig Config => (RunConfig)Forms[RunForm].Record with
@@ -94,7 +95,7 @@ public sealed partial class BookViewModel : ObservableObject
     {
         if (_snapshot is not { } snapshot)
         {
-            Status = "Aucun snapshot sélectionné.";
+            Status = "No snapshot selected.";
             return;
         }
 
@@ -110,15 +111,15 @@ public sealed partial class BookViewModel : ObservableObject
 
             int failed = run.Trades.Count(t => t.Error is not null);
             int cached = run.Trades.Count(t => t.FromCache);
-            long id = _store.Save(run, $"{snapshot.AsOf:dd/MM/yyyy} · {run.Trades.Length} trades");
+            long id = _store.Save(run, $"{snapshot.AsOf:yyyy-MM-dd} · {run.Trades.Length} trades");
             _run = run;
             Reload();
-            Status = $"Run {id} : {run.Trades.Length} trades en {watch.Elapsed.TotalSeconds:F1} s, {cached} depuis le cache, {failed} en échec.";
+            Status = $"Run {id}: {run.Trades.Length} trades in {watch.Elapsed.TotalSeconds:F1} s, {cached} from cache, {failed} failed.";
             RunSaved?.Invoke();
         }
         catch (OperationCanceledException)
         {
-            Status = "Run annulé.";
+            Status = "Run cancelled.";
         }
     }
 
@@ -127,7 +128,7 @@ public sealed partial class BookViewModel : ObservableObject
     {
         if (_snapshot is null)
         {
-            Status = "Aucun snapshot sélectionné.";
+            Status = "No snapshot selected.";
             return;
         }
         _store.Save(DemoBook.For(_snapshot, _underlying));
@@ -147,17 +148,17 @@ public sealed partial class BookViewModel : ObservableObject
     {
         try
         {
-            Status = "Lecture des positions IBKR…";
+            Status = "Reading IBKR positions…";
             var broker = await Task.Run(() => new IbkrPositionProvider(_settings).FetchAsync(token), token);
             var merged = BrokerImport.Merge(_positions, broker, Exercise);
             _store.Replace(merged.Positions);
             Reload();
-            string skipped = merged.Skipped.IsEmpty ? "" : $" Ignorées : {string.Join(", ", merged.Skipped)}.";
-            Status = $"IBKR : {merged.Added} ajoutées, {merged.Changed} modifiées, {merged.Closed} clôturées.{skipped}";
+            string skipped = merged.Skipped.IsEmpty ? "" : $" Skipped: {string.Join(", ", merged.Skipped)}.";
+            Status = $"IBKR: {merged.Added} added, {merged.Changed} changed, {merged.Closed} closed.{skipped}";
         }
         catch (OperationCanceledException)
         {
-            Status = "Import annulé.";
+            Status = "Import cancelled.";
         }
         catch (Exception e) when (e is InvalidOperationException or IOException or TimeoutException)
         {
@@ -209,6 +210,6 @@ public sealed partial class BookViewModel : ObservableObject
         var total = BookAggregator.Group([trade], BookGrouping.Total)[0];
         return new PositionRow(
             position, product, underlying, trade.Model?.GetType().Name.Replace("Config", "") ?? "", result.Engine,
-            result.Pv, result.PvStandardError, total.CashDelta, total.Vega, trade.FromCache ? "Cache" : "Calculé");
+            result.Pv, result.PvStandardError, total.CashDelta, total.Vega, trade.FromCache ? "Cache" : "Computed");
     }
 }

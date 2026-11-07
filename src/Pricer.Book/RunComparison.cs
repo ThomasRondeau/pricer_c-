@@ -40,9 +40,9 @@ public static class RunComparer
     private static ImmutableArray<string> ConfigChanges(RunResult left, RunResult right)
     {
         var changes = new List<string>();
-        if (left.SnapshotId != right.SnapshotId) changes.Add($"Snapshot : {left.SnapshotId} → {right.SnapshotId}");
-        if (left.Valuation != right.Valuation) changes.Add($"Date de valorisation : {left.Valuation:yyyy-MM-dd} → {right.Valuation:yyyy-MM-dd}");
-        if (left.CodeVersion != right.CodeVersion) changes.Add("Version du code différente");
+        if (left.SnapshotId != right.SnapshotId) changes.Add($"Snapshot: {left.SnapshotId} → {right.SnapshotId}");
+        if (left.Valuation != right.Valuation) changes.Add($"Valuation date: {left.Valuation:yyyy-MM-dd} → {right.Valuation:yyyy-MM-dd}");
+        if (left.CodeVersion != right.CodeVersion) changes.Add("Different code version");
 
         var (x, y) = (left.Config, right.Config);
         changes.AddRange(Parameters(x, y));
@@ -55,36 +55,36 @@ public static class RunComparer
 
     private static ImmutableArray<string> Causes(TradeResult? left, TradeResult? right)
     {
-        if (left is null) return ["Trade ajouté"];
-        if (right is null) return ["Trade retiré"];
+        if (left is null) return ["Trade added"];
+        if (right is null) return ["Trade removed"];
 
         var causes = new List<string>();
         var (p, q) = (left.Position, right.Position);
-        if (p.Quantity != q.Quantity) causes.Add($"Quantité : {Text(p.Quantity)} → {Text(q.Quantity)}");
-        if (p.Instrument.GetType() != q.Instrument.GetType()) causes.Add("Type de produit");
+        if (p.Quantity != q.Quantity) causes.Add($"Quantity: {Text(p.Quantity)} → {Text(q.Quantity)}");
+        if (p.Instrument.GetType() != q.Instrument.GetType()) causes.Add("Product type");
         else causes.AddRange(Parameters(p.Instrument, q.Instrument));
-        if (!States(p, q)) causes.Add("État de vie");
+        if (!States(p, q)) causes.Add("Lifecycle state");
 
         if (left.Model is { } lm && right.Model is { } rm)
         {
-            if (lm.GetType() != rm.GetType()) causes.Add($"Modèle : {lm.GetType().Name} → {rm.GetType().Name}");
+            if (lm.GetType() != rm.GetType()) causes.Add($"Model: {lm.GetType().Name} → {rm.GetType().Name}");
             else causes.AddRange(Parameters(lm, rm));
         }
         if (left.Engine is { } le && right.Engine is { } re)
         {
-            if (le.GetType() != re.GetType()) causes.Add($"Moteur : {le.GetType().Name} → {re.GetType().Name}");
+            if (le.GetType() != re.GetType()) causes.Add($"Engine: {le.GetType().Name} → {re.GetType().Name}");
             else causes.AddRange(Parameters(le, re));
         }
 
         foreach (var point in left.Market)
         {
             if (right.Market.FirstOrDefault(m => m.Underlying == point.Underlying) is not { } other) continue;
-            if (point.Spot != other.Spot) causes.Add($"Spot {point.Underlying} : {Text(point.Spot)} → {Text(other.Spot)}");
-            if (point.Vol != other.Vol) causes.Add($"Vol {point.Underlying} : {Text(point.Vol)} → {Text(other.Vol)}");
-            if (point.Rate != other.Rate) causes.Add($"Taux à l'échéance : {Text(point.Rate)} → {Text(other.Rate)}");
+            if (point.Spot != other.Spot) causes.Add($"Spot {point.Underlying}: {Text(point.Spot)} → {Text(other.Spot)}");
+            if (point.Vol != other.Vol) causes.Add($"Vol {point.Underlying}: {Text(point.Vol)} → {Text(other.Vol)}");
+            if (point.Rate != other.Rate) causes.Add($"Rate at expiry: {Text(point.Rate)} → {Text(other.Rate)}");
         }
 
-        if ((left.Error is null) != (right.Error is null)) causes.Add($"Erreur : {left.Error ?? "aucune"} → {right.Error ?? "aucune"}");
+        if ((left.Error is null) != (right.Error is null)) causes.Add($"Error: {left.Error ?? "none"} → {right.Error ?? "none"}");
         return [.. causes.Distinct()];
     }
 
@@ -92,7 +92,7 @@ public static class RunComparer
         ContentHash.Of(new { p.State }) == ContentHash.Of(new { q.State });
 
     private static IEnumerable<string> Parameters(object left, object right) =>
-        ParameterSchema.Diff(left, right).Select(d => $"{d.Parameter.Label} : {Text(d.Left)} → {Text(d.Right)}");
+        ParameterSchema.Diff(left, right).Select(d => $"{d.Parameter.Label}: {Text(d.Left)} → {Text(d.Right)}");
 
     private static string Text(object? value) => value switch
     {

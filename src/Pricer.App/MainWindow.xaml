@@ -2,11 +2,12 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Pricer.App.ViewModels"
+        xmlns:p="clr-namespace:Pricer.Presentation;assembly=Pricer.Presentation"
         xmlns:scott="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         xmlns:helix="http://helix-toolkit.org/wpf"
         Title="Pricer" Height="760" Width="1200" FontSize="13">
     <Window.Resources>
-        <DataTemplate DataType="{x:Type vm:NumberField}">
+        <DataTemplate DataType="{x:Type p:NumberField}">
             <Grid Margin="0,3">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -23,7 +24,7 @@
                         Minimum="{Binding Min}" Maximum="{Binding Max}" Value="{Binding Value}"/>
             </Grid>
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:ChoiceField}">
+        <DataTemplate DataType="{x:Type p:ChoiceField}">
             <Grid Margin="0,3">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -33,10 +34,10 @@
                 <ComboBox Grid.Column="1" ItemsSource="{Binding Choices}" SelectedItem="{Binding Value}"/>
             </Grid>
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:BoolField}">
+        <DataTemplate DataType="{x:Type p:BoolField}">
             <CheckBox Content="{Binding Label}" IsChecked="{Binding Value}" Margin="0,3"/>
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:DateField}">
+        <DataTemplate DataType="{x:Type p:DateField}">
             <Grid Margin="0,3">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -46,7 +47,7 @@
                 <DatePicker Grid.Column="1" SelectedDate="{Binding Value}"/>
             </Grid>
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:ParameterForm}">
+        <DataTemplate DataType="{x:Type p:ParameterForm}">
             <GroupBox Header="{Binding Title}" Margin="0,0,0,8" Padding="6">
                 <ItemsControl ItemsSource="{Binding Fields}"/>
             </GroupBox>
@@ -73,11 +74,11 @@
                     <RowDefinition/>
                     <RowDefinition/>
                 </Grid.RowDefinitions>
-                <TextBlock Text="Type de produit" VerticalAlignment="Center"/>
+                <TextBlock Text="Product type" VerticalAlignment="Center"/>
                 <ComboBox Grid.Column="1" ItemsSource="{Binding ProductKinds}" SelectedItem="{Binding ProductKind}"/>
-                <TextBlock Grid.Row="1" Text="Modèle" VerticalAlignment="Center" Margin="0,4,0,0"/>
+                <TextBlock Grid.Row="1" Text="Model" VerticalAlignment="Center" Margin="0,4,0,0"/>
                 <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AvailableModels}" SelectedItem="{Binding SelectedModel}" Margin="0,4,0,0"/>
-                <TextBlock Grid.Row="2" Text="Moteur" VerticalAlignment="Center" Margin="0,4,0,0"/>
+                <TextBlock Grid.Row="2" Text="Engine" VerticalAlignment="Center" Margin="0,4,0,0"/>
                 <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding AvailableEngines}" SelectedItem="{Binding SelectedEngine}" Margin="0,4,0,0"/>
             </Grid>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -98,29 +99,42 @@
                 <TextBlock Text="PV" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
                 <TextBlock Text="{Binding PvText}" FontSize="26" FontWeight="SemiBold"/>
                 <TextBlock Text="{Binding MarketLabel}" Foreground="Gray" VerticalAlignment="Center" Margin="24,0,0,0"/>
-                <Button Content="Ajouter au book" Command="{Binding AddToBookCommand}" VerticalAlignment="Center" Margin="24,0,0,0" Padding="10,2"/>
+                <Button Content="Add to book" Command="{Binding AddToBookCommand}" VerticalAlignment="Center" Margin="24,0,0,0" Padding="10,2"/>
             </StackPanel>
 
             <DataGrid Grid.Row="1" ItemsSource="{Binding Greeks}" AutoGenerateColumns="False" IsReadOnly="True"
                       HeadersVisibility="Column" CanUserAddRows="False" Margin="0,0,0,8">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Mesure" Binding="{Binding Measure}" Width="100"/>
-                    <DataGridTextColumn Header="Valeur" Binding="{Binding Value, StringFormat=N6}" Width="100"/>
-                    <DataGridTextColumn Header="Erreur std" Binding="{Binding Error, StringFormat=N6}" Width="80"/>
-                    <DataGridTextColumn Header="Méthode" Binding="{Binding Method}" Width="160"/>
+                    <DataGridTextColumn Header="Measure" Binding="{Binding Measure}" Width="100"/>
+                    <DataGridTextColumn Header="Value" Binding="{Binding Value, StringFormat=N6}" Width="100"/>
+                    <DataGridTextColumn Header="Std error" Binding="{Binding Error, StringFormat=N6}" Width="80"/>
+                    <DataGridTextColumn Header="Method" Binding="{Binding Method}" Width="160"/>
                     <DataGridTextColumn Header="Convention" Binding="{Binding Convention}" Width="130"/>
-                    <DataGridTextColumn Header="Bump (contrôle)" Binding="{Binding BumpValue, StringFormat=N6}" Width="110"/>
-                    <DataGridTextColumn Header="Écart" Binding="{Binding Gap, StringFormat=E2}" Width="*"/>
+                    <DataGridTextColumn Header="Bump (control)" Binding="{Binding BumpValue, StringFormat=N6}" Width="110"/>
+                    <DataGridTextColumn Header="Control convention" Binding="{Binding BumpConvention}" Width="130"/>
+                    <DataGridTextColumn Header="Gap" Binding="{Binding Gap, StringFormat=E2}" Width="80">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SameConvention}" Value="False">
+                                        <Setter Property="Foreground" Value="Gray"/>
+                                        <Setter Property="ToolTip" Value="{x:Static p:GreekRow.ConventionNote}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Note" Binding="{Binding GapNote}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
 
             <DataGrid Grid.Row="2" ItemsSource="{Binding Engines}" AutoGenerateColumns="False" IsReadOnly="True"
                       HeadersVisibility="Column" CanUserAddRows="False" Margin="0,0,0,8">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Moteur" Binding="{Binding Engine}" Width="220"/>
+                    <DataGridTextColumn Header="Engine" Binding="{Binding Engine}" Width="220"/>
                     <DataGridTextColumn Header="PV" Binding="{Binding Pv, StringFormat=N6}" Width="110"/>
-                    <DataGridTextColumn Header="Erreur std" Binding="{Binding Error, StringFormat=N6}" Width="90"/>
-                    <DataGridTextColumn Header="Temps (ms)" Binding="{Binding Milliseconds, StringFormat=N1}" Width="*"/>
+                    <DataGridTextColumn Header="Std error" Binding="{Binding Error, StringFormat=N6}" Width="90"/>
+                    <DataGridTextColumn Header="Time (ms)" Binding="{Binding Milliseconds, StringFormat=N1}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
 
@@ -167,22 +181,22 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <TextBlock Text="Sous-jacent" VerticalAlignment="Center" Margin="16,0,8,0"/>
+            <TextBlock Text="Underlying" VerticalAlignment="Center" Margin="16,0,8,0"/>
             <ComboBox ItemsSource="{Binding Reports}" SelectedItem="{Binding SelectedReport}" DisplayMemberPath="Underlying" Width="100"/>
-            <Button Content="Capturer IBKR" Command="{Binding CaptureIbkrCommand}" Margin="16,0,0,0" Padding="10,2"/>
-            <Button Content="Annuler" Command="{Binding CaptureIbkrCancelCommand}" Margin="6,0,0,0" Padding="10,2"/>
-            <Button Content="Capturer Yahoo" Command="{Binding CaptureYahooCommand}" Margin="6,0,0,0" Padding="10,2"/>
-            <Button Content="Capture synthétique" Command="{Binding CaptureSyntheticCommand}" Margin="6,0,0,0" Padding="10,2"/>
+            <Button Content="Capture IBKR" Command="{Binding CaptureIbkrCommand}" Margin="16,0,0,0" Padding="10,2"/>
+            <Button Content="Cancel" Command="{Binding CaptureIbkrCancelCommand}" Margin="6,0,0,0" Padding="10,2"/>
+            <Button Content="Capture Yahoo" Command="{Binding CaptureYahooCommand}" Margin="6,0,0,0" Padding="10,2"/>
+            <Button Content="Synthetic capture" Command="{Binding CaptureSyntheticCommand}" Margin="6,0,0,0" Padding="10,2"/>
         </StackPanel>
 
         <DataGrid Grid.Row="1" ItemsSource="{Binding Slices}" SelectedItem="{Binding SelectedSlice}" AutoGenerateColumns="False"
                   IsReadOnly="True" HeadersVisibility="Column" MaxHeight="240" SelectionMode="Single" Margin="0,0,0,8">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Échéance" Binding="{Binding Expiry}" Width="100"/>
+                <DataGridTextColumn Header="Expiry" Binding="{Binding Expiry}" Width="100"/>
                 <DataGridTextColumn Header="T" Binding="{Binding T, StringFormat=F3}" Width="60"/>
                 <DataGridTextColumn Header="Forward" Binding="{Binding Forward, StringFormat=F2}" Width="90"/>
                 <DataGridTextColumn Header="Points" Binding="{Binding Points}" Width="60"/>
-                <DataGridTextColumn Header="RMSE (pts vol)" Binding="{Binding RmseVolPoints, StringFormat=F2}" Width="100"/>
+                <DataGridTextColumn Header="RMSE (vol pts)" Binding="{Binding RmseVolPoints, StringFormat=F2}" Width="100"/>
                 <DataGridTextColumn Header="Butterfly" Binding="{Binding Butterfly}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
@@ -221,19 +235,19 @@
             <ContentControl Content="{Binding HestonForm}"/>
             <ContentControl Content="{Binding LocalVolForm}"/>
             <StackPanel Orientation="Horizontal">
-                <Button Content="Calibrer Heston" Command="{Binding CalibrateCommand}" Padding="10,2"/>
-                <Button Content="Comparer les modèles" Command="{Binding CompareCommand}" Margin="6,0,0,0" Padding="10,2"/>
+                <Button Content="Calibrate Heston" Command="{Binding CalibrateCommand}" Padding="10,2"/>
+                <Button Content="Compare models" Command="{Binding CompareCommand}" Margin="6,0,0,0" Padding="10,2"/>
             </StackPanel>
         </StackPanel>
 
         <DataGrid Grid.Column="2" ItemsSource="{Binding Slices}" SelectedItem="{Binding SelectedSlice}" AutoGenerateColumns="False"
                   IsReadOnly="True" HeadersVisibility="Column" MaxHeight="240" SelectionMode="Single" Margin="0,0,0,8">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Échéance" Binding="{Binding Expiry}" Width="100"/>
+                <DataGridTextColumn Header="Expiry" Binding="{Binding Expiry}" Width="100"/>
                 <DataGridTextColumn Header="T" Binding="{Binding T, StringFormat=F3}" Width="60"/>
-                <DataGridTextColumn Header="RMSE SVI (pts vol)" Binding="{Binding Svi, StringFormat=F2}" Width="130"/>
+                <DataGridTextColumn Header="RMSE SVI (vol pts)" Binding="{Binding Svi, StringFormat=F2}" Width="130"/>
                 <DataGridTextColumn Header="RMSE Heston" Binding="{Binding Heston, StringFormat=F2}" Width="100"/>
-                <DataGridTextColumn Header="RMSE vol locale" Binding="{Binding LocalVol, StringFormat=F2}" Width="*"/>
+                <DataGridTextColumn Header="RMSE local vol" Binding="{Binding LocalVol, StringFormat=F2}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 
@@ -262,26 +276,26 @@
         </ScrollViewer>
 
         <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,0,8">
-            <Button Content="Lancer le run" Command="{Binding RunCommand}" Padding="10,2"/>
-            <Button Content="Annuler" Command="{Binding RunCancelCommand}" Margin="6,0,0,0" Padding="10,2"/>
-            <Button Content="Book de démo" Command="{Binding DemoCommand}" Margin="16,0,0,0" Padding="10,2"/>
-            <Button Content="Importer IBKR" Command="{Binding ImportIbkrCommand}" Margin="6,0,0,0" Padding="10,2"/>
-            <Button Content="Supprimer" Command="{Binding DeleteCommand}" Margin="6,0,0,0" Padding="10,2"/>
-            <TextBlock Text="Regrouper par" VerticalAlignment="Center" Margin="16,0,6,0"/>
+            <Button Content="Run book" Command="{Binding RunCommand}" Padding="10,2"/>
+            <Button Content="Cancel" Command="{Binding RunCancelCommand}" Margin="6,0,0,0" Padding="10,2"/>
+            <Button Content="Demo book" Command="{Binding DemoCommand}" Margin="16,0,0,0" Padding="10,2"/>
+            <Button Content="Import IBKR" Command="{Binding ImportIbkrCommand}" Margin="6,0,0,0" Padding="10,2"/>
+            <Button Content="Delete" Command="{Binding DeleteCommand}" Margin="6,0,0,0" Padding="10,2"/>
+            <TextBlock Text="Group by" VerticalAlignment="Center" Margin="16,0,6,0"/>
             <ComboBox ItemsSource="{Binding Groupings}" SelectedItem="{Binding Grouping}" Width="100"/>
-            <TextBlock Text="Filtre" VerticalAlignment="Center" Margin="12,0,6,0"/>
+            <TextBlock Text="Filter" VerticalAlignment="Center" Margin="12,0,6,0"/>
             <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" Width="100" VerticalContentAlignment="Center"/>
         </StackPanel>
 
         <DataGrid Grid.Row="1" Grid.Column="2" ItemsSource="{Binding Summary}" AutoGenerateColumns="False" IsReadOnly="True"
                   HeadersVisibility="Column" MaxHeight="200" Margin="0,0,0,8">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Groupe" Binding="{Binding Key}" Width="130"/>
+                <DataGridTextColumn Header="Group" Binding="{Binding Key}" Width="130"/>
                 <DataGridTextColumn Header="Trades" Binding="{Binding Trades}" Width="50"/>
-                <DataGridTextColumn Header="Échecs" Binding="{Binding Failed}" Width="50"/>
-                <DataGridTextColumn Header="Grecques Model" Binding="{Binding ModelGreekTrades}" Width="100"/>
+                <DataGridTextColumn Header="Failures" Binding="{Binding Failed}" Width="50"/>
+                <DataGridTextColumn Header="Model greeks" Binding="{Binding ModelGreekTrades}" Width="100"/>
                 <DataGridTextColumn Header="PV" Binding="{Binding Pv, StringFormat=N2}" Width="100"/>
-                <DataGridTextColumn Header="Erreur std" Binding="{Binding StandardError, StringFormat=N2}" Width="70"/>
+                <DataGridTextColumn Header="Std error" Binding="{Binding StandardError, StringFormat=N2}" Width="70"/>
                 <DataGridTextColumn Header="Delta cash" Binding="{Binding CashDelta, StringFormat=N0}" Width="90"/>
                 <DataGridTextColumn Header="Gamma cash 1 %" Binding="{Binding CashGamma, StringFormat=N0}" Width="100"/>
                 <DataGridTextColumn Header="Vega" Binding="{Binding Vega, StringFormat=N2}" Width="80"/>
@@ -294,16 +308,16 @@
                   AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" SelectionMode="Single">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="90"/>
-                <DataGridTextColumn Header="Produit" Binding="{Binding Product}" Width="120"/>
-                <DataGridTextColumn Header="Sous-jacent" Binding="{Binding Underlying}" Width="90"/>
-                <DataGridTextColumn Header="Quantité" Binding="{Binding Quantity, StringFormat=N0}" Width="60"/>
+                <DataGridTextColumn Header="Product" Binding="{Binding Product}" Width="120"/>
+                <DataGridTextColumn Header="Underlying" Binding="{Binding Underlying}" Width="90"/>
+                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity, StringFormat=N0}" Width="60"/>
                 <DataGridTextColumn Header="Tag" Binding="{Binding Tag}" Width="80"/>
-                <DataGridTextColumn Header="Moteur" Binding="{Binding Engine}" Width="150"/>
+                <DataGridTextColumn Header="Engine" Binding="{Binding Engine}" Width="150"/>
                 <DataGridTextColumn Header="PV" Binding="{Binding Pv, StringFormat=N2}" Width="90"/>
-                <DataGridTextColumn Header="Erreur std" Binding="{Binding Error, StringFormat=N3}" Width="70"/>
+                <DataGridTextColumn Header="Std error" Binding="{Binding Error, StringFormat=N3}" Width="70"/>
                 <DataGridTextColumn Header="Delta cash" Binding="{Binding CashDelta, StringFormat=N0}" Width="80"/>
                 <DataGridTextColumn Header="Vega" Binding="{Binding Vega, StringFormat=N2}" Width="70"/>
-                <DataGridTextColumn Header="Statut" Binding="{Binding Status}" Width="*"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 
@@ -329,7 +343,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,0,0,8">
-            <TextBlock Text="Run de référence" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBlock Text="Reference run" VerticalAlignment="Center" Margin="0,0,6,0"/>
             <ComboBox ItemsSource="{Binding Runs}" SelectedItem="{Binding Left}" Width="300">
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
@@ -337,7 +351,7 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <TextBlock Text="comparé à" VerticalAlignment="Center" Margin="12,0,6,0"/>
+            <TextBlock Text="compared with" VerticalAlignment="Center" Margin="12,0,6,0"/>
             <ComboBox ItemsSource="{Binding Runs}" SelectedItem="{Binding Right}" Width="300">
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
@@ -353,9 +367,9 @@
                   IsReadOnly="True" HeadersVisibility="Column" SelectionMode="Single">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Trade" Binding="{Binding Id}" Width="*"/>
-                <DataGridTextColumn Header="PV référence" Binding="{Binding Left, StringFormat=N4}" Width="110"/>
-                <DataGridTextColumn Header="PV comparé" Binding="{Binding Right, StringFormat=N4}" Width="110"/>
-                <DataGridTextColumn Header="Écart" Binding="{Binding Change, StringFormat=N4}" Width="110"/>
+                <DataGridTextColumn Header="Reference PV" Binding="{Binding Left, StringFormat=N4}" Width="110"/>
+                <DataGridTextColumn Header="Compared PV" Binding="{Binding Right, StringFormat=N4}" Width="110"/>
+                <DataGridTextColumn Header="Gap" Binding="{Binding Change, StringFormat=N4}" Width="110"/>
             </DataGrid.Columns>
         </DataGrid>
 
@@ -367,7 +381,7 @@
             <GroupBox Header="Configuration">
                 <ListBox ItemsSource="{Binding ConfigChanges}" BorderThickness="0"/>
             </GroupBox>
-            <GroupBox Grid.Row="1" Header="Causes pour ce trade" Margin="0,8,0,0">
+            <GroupBox Grid.Row="1" Header="Causes for this trade" Margin="0,8,0,0">
                 <ListBox ItemsSource="{Binding Causes}" BorderThickness="0"/>
             </GroupBox>
         </Grid>
@@ -392,7 +406,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,0,0,8">
-            <TextBlock Text="De" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBlock Text="From" VerticalAlignment="Center" Margin="0,0,6,0"/>
             <ComboBox ItemsSource="{Binding Runs}" SelectedItem="{Binding From}" Width="280">
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
@@ -400,7 +414,7 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <TextBlock Text="à" VerticalAlignment="Center" Margin="12,0,6,0"/>
+            <TextBlock Text="to" VerticalAlignment="Center" Margin="12,0,6,0"/>
             <ComboBox ItemsSource="{Binding Runs}" SelectedItem="{Binding To}" Width="280">
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
@@ -408,9 +422,9 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <Button Content="Expliquer" Command="{Binding ExplainCommand}" Margin="12,0,0,0" Padding="10,2"/>
-            <Button Content="Annuler" Command="{Binding ExplainCancelCommand}" Margin="6,0,0,0" Padding="10,2"/>
-            <TextBlock Text="Regrouper par" VerticalAlignment="Center" Margin="12,0,6,0"/>
+            <Button Content="Explain" Command="{Binding ExplainCommand}" Margin="12,0,0,0" Padding="10,2"/>
+            <Button Content="Cancel" Command="{Binding ExplainCancelCommand}" Margin="6,0,0,0" Padding="10,2"/>
+            <TextBlock Text="Group by" VerticalAlignment="Center" Margin="12,0,6,0"/>
             <ComboBox ItemsSource="{Binding Groupings}" SelectedItem="{Binding Grouping}" Width="100"/>
         </StackPanel>
 
@@ -423,10 +437,10 @@
             <ContentControl Content="{Binding Form}"/>
             <DataGrid ItemsSource="{Binding Factors}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Facteur" Binding="{Binding Factor}" Width="90"/>
-                    <DataGridTextColumn Header="Réévaluation" Binding="{Binding Waterfall, StringFormat=N2}" Width="85"/>
-                    <DataGridTextColumn Header="Grecques" Binding="{Binding Greeks, StringFormat=N2}" Width="75"/>
-                    <DataGridTextColumn Header="Écart" Binding="{Binding Gap, StringFormat=N2}" Width="*"/>
+                    <DataGridTextColumn Header="Factor" Binding="{Binding Factor}" Width="90"/>
+                    <DataGridTextColumn Header="Full reval" Binding="{Binding Waterfall, StringFormat=N2}" Width="85"/>
+                    <DataGridTextColumn Header="Greeks" Binding="{Binding Greeks, StringFormat=N2}" Width="75"/>
+                    <DataGridTextColumn Header="Gap" Binding="{Binding Gap, StringFormat=N2}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
         </StackPanel>
@@ -434,19 +448,19 @@
         <DataGrid Grid.Row="4" Grid.ColumnSpan="3" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" AutoGenerateColumns="False"
                   IsReadOnly="True" HeadersVisibility="Column" SelectionMode="Single" MaxHeight="130" Margin="0,8,0,8">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Groupe" Binding="{Binding Key}" Width="120"/>
+                <DataGridTextColumn Header="Group" Binding="{Binding Key}" Width="120"/>
                 <DataGridTextColumn Header="PnL" Binding="{Binding Total, StringFormat=N2}" Width="85"/>
-                <DataGridTextColumn Header="Temps" Binding="{Binding Time, StringFormat=N2}" Width="75"/>
-                <DataGridTextColumn Header="Événements" Binding="{Binding Events, StringFormat=N2}" Width="80"/>
+                <DataGridTextColumn Header="Time" Binding="{Binding Time, StringFormat=N2}" Width="75"/>
+                <DataGridTextColumn Header="Events" Binding="{Binding Events, StringFormat=N2}" Width="80"/>
                 <DataGridTextColumn Header="Spot" Binding="{Binding Spot, StringFormat=N2}" Width="85"/>
-                <DataGridTextColumn Header="Dividendes" Binding="{Binding Dividends, StringFormat=N2}" Width="75"/>
-                <DataGridTextColumn Header="Vol niveau" Binding="{Binding VolLevel, StringFormat=N2}" Width="75"/>
-                <DataGridTextColumn Header="Vol forme" Binding="{Binding VolShape, StringFormat=N2}" Width="75"/>
-                <DataGridTextColumn Header="Taux" Binding="{Binding Rates, StringFormat=N2}" Width="70"/>
+                <DataGridTextColumn Header="Dividends" Binding="{Binding Dividends, StringFormat=N2}" Width="75"/>
+                <DataGridTextColumn Header="Vol level" Binding="{Binding VolLevel, StringFormat=N2}" Width="75"/>
+                <DataGridTextColumn Header="Vol shape" Binding="{Binding VolShape, StringFormat=N2}" Width="75"/>
+                <DataGridTextColumn Header="Rates" Binding="{Binding Rates, StringFormat=N2}" Width="70"/>
                 <DataGridTextColumn Header="Composition" Binding="{Binding Composition, StringFormat=N2}" Width="85"/>
-                <DataGridTextColumn Header="Résiduel" Binding="{Binding Residual, StringFormat=N2}" Width="65"/>
-                <DataGridTextColumn Header="Rés. grecques" Binding="{Binding GreekResidual, StringFormat=N2}" Width="85"/>
-                <DataGridTextColumn Header="Statut" Binding="{Binding Status}" Width="*"/>
+                <DataGridTextColumn Header="Residual" Binding="{Binding Residual, StringFormat=N2}" Width="65"/>
+                <DataGridTextColumn Header="Greeks residual" Binding="{Binding GreekResidual, StringFormat=N2}" Width="85"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 
@@ -455,17 +469,17 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Trade" Binding="{Binding Key}" Width="120"/>
                 <DataGridTextColumn Header="PnL" Binding="{Binding Total, StringFormat=N2}" Width="85"/>
-                <DataGridTextColumn Header="Temps" Binding="{Binding Time, StringFormat=N2}" Width="75"/>
-                <DataGridTextColumn Header="Événements" Binding="{Binding Events, StringFormat=N2}" Width="80"/>
+                <DataGridTextColumn Header="Time" Binding="{Binding Time, StringFormat=N2}" Width="75"/>
+                <DataGridTextColumn Header="Events" Binding="{Binding Events, StringFormat=N2}" Width="80"/>
                 <DataGridTextColumn Header="Spot" Binding="{Binding Spot, StringFormat=N2}" Width="85"/>
-                <DataGridTextColumn Header="Dividendes" Binding="{Binding Dividends, StringFormat=N2}" Width="75"/>
-                <DataGridTextColumn Header="Vol niveau" Binding="{Binding VolLevel, StringFormat=N2}" Width="75"/>
-                <DataGridTextColumn Header="Vol forme" Binding="{Binding VolShape, StringFormat=N2}" Width="75"/>
-                <DataGridTextColumn Header="Taux" Binding="{Binding Rates, StringFormat=N2}" Width="70"/>
+                <DataGridTextColumn Header="Dividends" Binding="{Binding Dividends, StringFormat=N2}" Width="75"/>
+                <DataGridTextColumn Header="Vol level" Binding="{Binding VolLevel, StringFormat=N2}" Width="75"/>
+                <DataGridTextColumn Header="Vol shape" Binding="{Binding VolShape, StringFormat=N2}" Width="75"/>
+                <DataGridTextColumn Header="Rates" Binding="{Binding Rates, StringFormat=N2}" Width="70"/>
                 <DataGridTextColumn Header="Composition" Binding="{Binding Composition, StringFormat=N2}" Width="85"/>
-                <DataGridTextColumn Header="Résiduel" Binding="{Binding Residual, StringFormat=N2}" Width="65"/>
-                <DataGridTextColumn Header="Rés. grecques" Binding="{Binding GreekResidual, StringFormat=N2}" Width="85"/>
-                <DataGridTextColumn Header="Statut" Binding="{Binding Status}" Width="*"/>
+                <DataGridTextColumn Header="Residual" Binding="{Binding Residual, StringFormat=N2}" Width="65"/>
+                <DataGridTextColumn Header="Greeks residual" Binding="{Binding GreekResidual, StringFormat=N2}" Width="85"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 

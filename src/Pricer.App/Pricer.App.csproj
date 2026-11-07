@@ -1,9 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Pricer.Risk\Pricer.Risk.csproj" />
+    <ProjectReference Include="..\Pricer.Presentation\Pricer.Presentation.csproj" />
     <ProjectReference Include="..\Pricer.Data\Pricer.Data.csproj" />
-    <ProjectReference Include="..\Pricer.Book\Pricer.Book.csproj" />
   </ItemGroup>
 
   <ItemGroup>

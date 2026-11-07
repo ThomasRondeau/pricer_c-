@@ -1,0 +1,31 @@
+[
+  {
+    "File": "capture-1.json",
+    "Label": "Synthetic SVI \u00B7 2026-10-30",
+    "AsOf": "2026-10-30",
+    "Source": "Synthetic",
+    "Underlyings": [
+      "SYNTH",
+      "SYNTH2"
+    ]
+  },
+  {
+    "File": "capture-2.json",
+    "Label": "Yahoo \u00B7 2026-10-30 \u00B7 ^SPX",
+    "AsOf": "2026-10-30",
+    "Source": "Yahoo",
+    "Underlyings": [
+      "^SPX"
+    ]
+  },
+  {
+    "File": "capture-3.json",
+    "Label": "Yahoo \u00B7 2026-10-30 \u00B7 ^SPX, SPY",
+    "AsOf": "2026-10-30",
+    "Source": "Yahoo",
+    "Underlyings": [
+      "^SPX",
+      "SPY"
+    ]
+  }
+]

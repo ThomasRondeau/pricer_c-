@@ -1,0 +1,57 @@
+name: Web demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Install WebAssembly build tools
+        run: dotnet workload install wasm-tools
+
+      - name: Test the pricing library
+        run: dotnet test tests/Pricer.Tests -c Release
+
+      - name: Publish (AOT)
+        run: dotnet publish src/Pricer.Web -c Release -o publish
+
+      # Pages serves the site under /<repository>/: the base href must say so. The 404 copy lets
+      # deep links such as /model-lab reach the app, and .nojekyll keeps the _framework folder.
+      - name: Prepare for GitHub Pages
+        run: |
+          base="/${{ github.event.repository.name }}/"
+          sed -i "s|<base href=\"/\" />|<base href=\"$base\" />|" publish/wwwroot/index.html
+          cp publish/wwwroot/index.html publish/wwwroot/404.html
+          touch publish/wwwroot/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: publish/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

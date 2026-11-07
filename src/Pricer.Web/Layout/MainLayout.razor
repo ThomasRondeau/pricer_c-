@@ -1,0 +1,72 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject DemoSession Session
+
+<header class="topbar">
+    <div class="brand">
+        <span class="brand-name">Equity Pricer</span>
+        <span class="brand-tag">C# / .NET 9 · running in your browser</span>
+    </div>
+    <nav class="tabs" aria-label="Pages">
+        <NavLink href="" Match="NavLinkMatch.All">Pricer</NavLink>
+        <NavLink href="model-lab">Model Lab</NavLink>
+    </nav>
+    <div class="market-picker">
+        <label>
+            <span>Market</span>
+            <select @onchange="OnCapture" disabled="@(Session.Captures.Count == 0)">
+                @foreach (var capture in Session.Captures)
+                {
+                    <option value="@capture.File" selected="@(capture == Session.Capture)">@capture.Label</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Underlying</span>
+            <select @onchange="OnUnderlying" disabled="@(Session.Capture is null)">
+                @foreach (var name in Session.Capture?.Underlyings ?? [])
+                {
+                    <option value="@name" selected="@(name == Session.Underlying)">@name</option>
+                }
+            </select>
+        </label>
+    </div>
+    <a class="source-link" href="@Links.Repository" target="_blank" rel="noopener">Source on GitHub</a>
+</header>
+
+@if (Session.Error is { } error)
+{
+    <div class="banner error" role="alert">@error</div>
+}
+
+<main>
+    @Body
+</main>
+
+<footer class="footer">
+    <span>Market data: synthetic SVI surface, and Yahoo Finance option chains captured on 2026-10-30, recalibrated here. Demo use only, not investment advice.</span>
+    <span>Every price is computed live in WebAssembly: no server involved.</span>
+</footer>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += Refresh;
+        await Session.InitializeAsync();
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task OnCapture(ChangeEventArgs e)
+    {
+        var entry = Session.Captures.FirstOrDefault(c => c.File == e.Value?.ToString());
+        if (entry is not null) await Session.SelectAsync(entry, Session.Underlying);
+    }
+
+    private async Task OnUnderlying(ChangeEventArgs e)
+    {
+        if (Session.Capture is { } capture) await Session.SelectAsync(capture, e.Value?.ToString());
+    }
+
+    public void Dispose() => Session.Changed -= Refresh;
+}

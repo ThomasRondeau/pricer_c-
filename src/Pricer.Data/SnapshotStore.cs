@@ -11,8 +11,6 @@ namespace Pricer.Data;
 
 public sealed record SnapshotInfo(long Id, DateOnly AsOf, DateTime CapturedAt, string Source, string Hash, string Underlyings);
 
-public sealed record StoredCapture(MarketSnapshot Snapshot, ImmutableArray<CalibrationReport> Reports);
-
 /// <summary>SQLite store for captured snapshots, with raw chains and calibration reports.</summary>
 public sealed class SnapshotStore : IMarketDataProvider
 {
@@ -79,6 +77,12 @@ public sealed class SnapshotStore : IMarketDataProvider
         var row = db.QuerySingle<(string Snapshot, string Reports)>(
             "SELECT snapshot_json, reports_json FROM snapshots WHERE id = @id", new { id });
         return new StoredCapture(Deserialize<MarketSnapshot>(row.Snapshot), Deserialize<ImmutableArray<CalibrationReport>>(row.Reports));
+    }
+
+    public IReadOnlyList<string> ChainUnderlyings(long id)
+    {
+        using var db = Open();
+        return [.. db.Query<string>("SELECT underlying FROM chains WHERE snapshot_id = @id ORDER BY underlying", new { id })];
     }
 
     public OptionChain LoadChain(long id, string underlying)

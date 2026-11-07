@@ -50,7 +50,7 @@ public sealed class BlackScholesMonteCarloEngine : IPricingEngine
         if (t < 0) return Fixed(request, 0, 0);
 
         var x = EngineInputs.For(instrument, request, t);
-        if (x.Vol <= 0) throw new ArgumentException("Le Monte Carlo demande une vol strictement positive.");
+        if (x.Vol <= 0) throw new ArgumentException("Monte Carlo requires a strictly positive vol.");
         var state = request.Trade.State;
         var compiled = PayoffCompiler.Compile(instrument, valuation, market.Spot, x.Vol, state);
         var replay = PayoffReplay.Run(compiled, instrument.Underlyings, valuation, state, _ => market.Spot);

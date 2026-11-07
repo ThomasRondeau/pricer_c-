@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Pricer.Core;
 
-namespace Pricer.App.ViewModels;
+namespace Pricer.Presentation;
 
 public abstract class ParameterField(ParameterDescriptor descriptor, Action<string, object?> commit) : ObservableObject
 {

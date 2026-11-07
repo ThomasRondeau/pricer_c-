@@ -1,0 +1,168 @@
+@page "/"
+@inherits ViewModelComponent<Pricer.Presentation.PricerViewModel>
+@inject DemoSession Session
+@using Pricer.Presentation
+@* Options carry "selected" rather than the select a "value": Blazor sets a select value before its options exist. *@
+
+<PageTitle>Pricer · Equity Pricer</PageTitle>
+
+<section class="intro">
+    <h1>Pricer</h1>
+    <p>
+        Pick a product, a model and an engine, then move any parameter: the trade is repriced as you type.
+        Each greek states the method that produced it (closed form, PDE grid, pathwise, likelihood ratio…)
+        and is checked against a bump-and-reprice control. Other engines price the same trade for comparison.
+    </p>
+</section>
+
+<div class="workspace">
+    <aside class="inputs">
+        <fieldset class="form-card">
+            <legend>Setup</legend>
+            <label class="field">
+                <span class="field-label">Product</span>
+                <select @onchange="e => ViewModel.ProductKind = Enum.Parse<ProductKind>(e.Value!.ToString()!)">
+                    @foreach (ProductKind kind in ViewModel.ProductKinds)
+                    {
+                        <option value="@kind" selected="@(kind == ViewModel.ProductKind)">@ParameterFormView.Spaced(kind.ToString())</option>
+                    }
+                </select>
+            </label>
+            <label class="field">
+                <span class="field-label">Model</span>
+                <select @onchange="e => ViewModel.SelectedModel = Enum.Parse<ModelKind>(e.Value!.ToString()!)">
+                    @foreach (var model in ViewModel.AvailableModels)
+                    {
+                        <option value="@model" selected="@(model == ViewModel.SelectedModel)">@ParameterFormView.Spaced(model.ToString())</option>
+                    }
+                </select>
+            </label>
+            <label class="field">
+                <span class="field-label">Engine</span>
+                <select @onchange="e => ViewModel.SelectedEngine = Enum.Parse<EngineKind>(e.Value!.ToString()!)">
+                    @foreach (var engine in ViewModel.AvailableEngines)
+                    {
+                        <option value="@engine" selected="@(engine == ViewModel.SelectedEngine)">@(engine == EngineKind.Pde ? "PDE" : ParameterFormView.Spaced(engine.ToString()))</option>
+                    }
+                </select>
+            </label>
+        </fieldset>
+        @foreach (var form in ViewModel.Forms)
+        {
+            <ParameterFormView Form="form" />
+        }
+    </aside>
+
+    <section class="results">
+        <div class="pv-card @(ViewModel.HasError ? "has-error" : "")" aria-live="polite">
+            <div>
+                <div class="pv-label">Present value · @ViewModel.MarketLabel</div>
+                <div class="pv-value">@(ViewModel.HasError ? "—" : ViewModel.PvText)</div>
+            </div>
+            <div class="pv-status">
+                @if (ViewModel.IsBusy)
+                {
+                    <span class="busy">Computing…</span>
+                }
+                <span class="@(ViewModel.HasError ? "error-text" : "muted")">@ViewModel.Status</span>
+            </div>
+        </div>
+
+        <h2>Greeks</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Measure</th><th class="num">Value</th><th class="num">Std error</th><th>Method</th><th>Convention</th>
+                        <th class="num">Bump (control)</th><th>Control convention</th><th class="num">Gap</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var greek in ViewModel.Greeks)
+                    {
+                        <tr>
+                            <td>@greek.Measure</td>
+                            <td class="num">@greek.Value.ToString("N6")</td>
+                            <td class="num">@greek.Error?.ToString("N6")</td>
+                            <td>@ParameterFormView.Spaced(greek.Method)</td>
+                            <td>@ParameterFormView.Spaced(greek.Convention)</td>
+                            <td class="num">@greek.BumpValue.ToString("N6")</td>
+                            <td>@ParameterFormView.Spaced(greek.BumpConvention)</td>
+                            @if (greek.SameConvention)
+                            {
+                                <td class="num">@greek.Gap.ToString("E2")</td>
+                            }
+                            else
+                            {
+                                <td class="num muted" title="@GreekRow.ConventionNote">@greek.Gap.ToString("E2")*</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (ViewModel.Greeks.Any(g => !g.SameConvention))
+        {
+            <p class="muted small note">* @GreekRow.ConventionNote The grid greek holds the local vol function fixed (model greek);
+                the control rebuilds it from the implied surface held fixed in strike (sticky-strike market greek).</p>
+        }
+
+        <h2>Engine comparison</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Engine</th><th class="num">PV</th><th class="num">Std error</th><th class="num">Time (ms)</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in ViewModel.Engines)
+                    {
+                        <tr>
+                            <td>@row.Engine</td>
+                            <td class="num">@row.Pv.ToString("N6")</td>
+                            <td class="num">@row.Error?.ToString("N6")</td>
+                            <td class="num">@row.Milliseconds.ToString("N1")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <h2>Payoff profile</h2>
+        <LineChart Title="PV vs spot" XLabel="Spot" YLabel="PV" Series="_profile" />
+    </section>
+</div>
+
+@code {
+    private IReadOnlyList<ChartSeries> _profile = [];
+    private ProfileData? _shown;
+
+    protected override PricerViewModel ViewModel => Session.Pricer;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Session.Changed += OnSession;
+    }
+
+    protected override void OnParametersSet() => UpdateProfile();
+
+    private void OnSession() => _ = InvokeAsync(() =>
+    {
+        UpdateProfile();
+        StateHasChanged();
+    });
+
+    private void UpdateProfile()
+    {
+        if (Session.Profile is not { } profile || ReferenceEquals(profile, _shown)) return;
+        _shown = profile;
+        _profile = [new ChartSeries("PV", profile.Spots, profile.Values)];
+    }
+
+    public override void Dispose()
+    {
+        Session.Changed -= OnSession;
+        base.Dispose();
+    }
+}

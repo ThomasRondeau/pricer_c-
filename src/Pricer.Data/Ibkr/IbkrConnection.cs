@@ -43,7 +43,7 @@ public sealed class IbkrConnection : DefaultEWrapper, IDisposable
         if (!connection._client.IsConnected())
         {
             throw new IOException(
-                $"Connexion à TWS impossible sur {settings.Host}:{settings.Port}. Vérifie que TWS tourne et que l'API socket est activée. {connection._lastConnectionError}");
+                $"Cannot connect to TWS on {settings.Host}:{settings.Port}. Check that TWS is running and the socket API is enabled. {connection._lastConnectionError}");
         }
 
         var reader = new EReader(connection._client, connection._signal);
@@ -67,7 +67,7 @@ public sealed class IbkrConnection : DefaultEWrapper, IDisposable
         var (id, pending) = Register();
         _client.reqContractDetails(id, contract);
         await Await(id, pending, timeout, token);
-        return pending.ConId != 0 ? pending.ConId : throw new InvalidOperationException($"Contrat introuvable : {contract.Symbol}.");
+        return pending.ConId != 0 ? pending.ConId : throw new InvalidOperationException($"Contract not found: {contract.Symbol}.");
     }
 
     public async Task<IReadOnlyList<OptionParameters>> OptionParametersAsync(

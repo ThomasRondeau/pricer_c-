@@ -55,40 +55,40 @@ public sealed record AnalyticEngineConfig : EngineConfig;
 
 public sealed record PdeEngineConfig : EngineConfig
 {
-    [Parameter("Pas d'espace", Group = "Moteur", Min = 50, Max = 3000)]
+    [Parameter("Space steps", Group = "Engine", Min = 50, Max = 3000)]
     public int SpaceSteps { get; init; } = 500;
 
-    [Parameter("Pas de temps", Group = "Moteur", Min = 20, Max = 2000)]
+    [Parameter("Time steps", Group = "Engine", Min = 20, Max = 2000)]
     public int TimeSteps { get; init; } = 250;
 
-    [Parameter("Pas Rannacher", Group = "Moteur", Min = 0, Max = 10)]
+    [Parameter("Rannacher steps", Group = "Engine", Min = 0, Max = 10)]
     public int RannacherSteps { get; init; } = 2;
 
-    [Parameter("Largeur de grille", Group = "Moteur", Unit = "écarts-types", Min = 3, Max = 10)]
+    [Parameter("Grid width", Group = "Engine", Unit = "std devs", Min = 3, Max = 10)]
     public double Width { get; init; } = 5;
 }
 
 public sealed record MonteCarloEngineConfig : EngineConfig
 {
-    [Parameter("Trajectoires", Group = "Moteur", Min = 1024, Max = 1048576)]
+    [Parameter("Paths", Group = "Engine", Min = 1024, Max = 1048576)]
     public int Paths { get; init; } = 1 << 16;
 
     /// <summary>Independently randomised copies of the Sobol set; their dispersion gives the standard error.</summary>
-    [Parameter("Lots", Group = "Moteur", Min = 4, Max = 128)]
+    [Parameter("Batches", Group = "Engine", Min = 4, Max = 128)]
     public int Batches { get; init; } = 32;
 
-    [Parameter("Graine", Group = "Moteur", Min = 0, Max = 100000)]
+    [Parameter("Seed", Group = "Engine", Min = 0, Max = 100000)]
     public int Seed { get; init; } = 42;
 
-    [Parameter("Grecques", Group = "Moteur")]
+    [Parameter("Greeks", Group = "Engine")]
     public McGreekChoice Greeks { get; init; } = McGreekChoice.Auto;
 
     /// <summary>Half-width of the ramp replacing a step in pathwise derivatives, relative to its scale. The PV stays unsmoothed.</summary>
-    [Parameter("Lissage des discontinuités", Group = "Moteur", Unit = "rel", Min = 0, Max = 0.1)]
+    [Parameter("Discontinuity smoothing", Group = "Engine", Unit = "rel", Min = 0, Max = 0.1)]
     public double Smoothing { get; init; }
 
     /// <summary>For the stepped models; Black-Scholes jumps exactly from one event date to the next.</summary>
-    [Parameter("Pas par an", Group = "Moteur", Min = 4, Max = 365)]
+    [Parameter("Steps per year", Group = "Engine", Min = 4, Max = 365)]
     public int StepsPerYear { get; init; } = 52;
 }
 

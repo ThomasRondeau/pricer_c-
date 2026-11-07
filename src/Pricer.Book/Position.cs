@@ -29,23 +29,23 @@ public sealed record Position(
 /// Scenario shifts apply to every underlying, before any calibration.</summary>
 public sealed record RunConfig
 {
-    [Parameter("Modèle des vanilles", Group = "Run")]
+    [Parameter("Vanilla model", Group = "Run")]
     public ModelChoice VanillaModel { get; init; } = ModelChoice.BlackScholes;
 
-    [Parameter("Modèle des exotiques", Group = "Run")]
+    [Parameter("Exotic model", Group = "Run")]
     public ModelChoice ExoticModel { get; init; } = ModelChoice.LocalVol;
 
-    [Parameter("Modèle des structurés", Group = "Run")]
+    [Parameter("Structured model", Group = "Run")]
     public ModelChoice NoteModel { get; init; } = ModelChoice.LocalVol;
 
-    [Parameter("Scénario : choc de spot", Group = "Run", Unit = "rel", Min = -0.5, Max = 0.5)]
+    [Parameter("Scenario: spot shock", Group = "Run", Unit = "rel", Min = -0.5, Max = 0.5)]
     public double SpotShock { get; init; }
 
-    [Parameter("Scénario : choc de vol", Group = "Run", Unit = "abs", Min = -0.1, Max = 0.3)]
+    [Parameter("Scenario: vol shock", Group = "Run", Unit = "abs", Min = -0.1, Max = 0.3)]
     public double VolShock { get; init; }
 
     /// <summary>A small bump on a payoff with jumps measures noise, not a sensitivity.</summary>
-    [Parameter("Bump spot des payoffs discontinus", Group = "Run", Unit = "rel", Min = 0.001, Max = 0.05)]
+    [Parameter("Spot bump for discontinuous payoffs", Group = "Run", Unit = "rel", Min = 0.001, Max = 0.05)]
     public double DiscontinuousSpotBump { get; init; } = 0.01;
 
     public PdeEngineConfig Pde { get; init; } = new();

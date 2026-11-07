@@ -45,7 +45,7 @@ public sealed class FiniteDifferenceEngine : IPricingEngine
         if (t == 0) return Result(request, new GridValue(PayoffCompiler.AtExpiry(option, spot), 0, 0, 0), name);
 
         var x = EngineInputs.For(option, request, t);
-        if (x.Vol <= 0) throw new ArgumentException("La PDE demande une vol strictement positive.");
+        if (x.Vol <= 0) throw new ArgumentException("The PDE requires a strictly positive vol.");
         return Result(request, Value(option, request, BuildDynamics(request, option, x, config), config), name);
     }
 

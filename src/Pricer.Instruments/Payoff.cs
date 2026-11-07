@@ -102,7 +102,7 @@ public static class PayoffReplay
             if (fixings.TryGetValue((underlying, date), out double level)) return level;
             return date == valuation
                 ? spot(underlying)
-                : throw new InvalidOperationException($"Fixing manquant : {underlying} au {date:yyyy-MM-dd}.");
+                : throw new InvalidOperationException($"Missing fixing: {underlying} on {date:yyyy-MM-dd}.");
         }
 
         double Evaluate(PayoffExpr expr, DateOnly date) => expr switch
@@ -161,7 +161,7 @@ public static class PayoffCompiler
         ReverseConvertible n => ReverseConvertibleProgram(n),
         Autocall n => AutocallProgram(n),
         Phoenix n => PhoenixProgram(n),
-        _ => throw new NotSupportedException($"Aucun payoff de trajectoire pour {instrument.GetType().Name}."),
+        _ => throw new NotSupportedException($"No path payoff for {instrument.GetType().Name}."),
     };
 
     /// <summary>Value on the expiry date itself, where no simulation or grid is needed.</summary>
@@ -179,7 +179,7 @@ public static class PayoffCompiler
 
     private static PayoffProgram Asian(AsianOption o)
     {
-        if (o.Fixings < 1) throw new ArgumentException("Il faut au moins un fixing.");
+        if (o.Fixings < 1) throw new ArgumentException("At least one fixing is required.");
 
         var events = ImmutableArray.CreateBuilder<PayoffEvent>();
         var slot = new SlotExpr(0);

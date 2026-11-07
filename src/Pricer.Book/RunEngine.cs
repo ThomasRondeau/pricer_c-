@@ -128,7 +128,7 @@ public sealed class RunEngine(EngineRegistry registry, IRunCache cache)
         if (available.Contains(typeof(AnalyticEngineConfig))) return new AnalyticEngineConfig();
         if (available.Contains(typeof(PdeEngineConfig))) return config.Pde;
         if (available.Contains(typeof(MonteCarloEngineConfig))) return config.MonteCarlo;
-        throw new NotSupportedException($"Pas de moteur pour {instrument.GetType().Name} sous {model.GetType().Name}.");
+        throw new NotSupportedException($"No engine for {instrument.GetType().Name} under {model.GetType().Name}.");
     }
 
     private static string Hash(Position position, MarketSnapshot market, ModelConfig model, EngineConfig engine, RiskConfig risk)

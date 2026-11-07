@@ -30,7 +30,7 @@ public static class BookAggregator
     {
         BookGrouping.Underlying => string.Join("+", position.Instrument.Underlyings),
         BookGrouping.Product => position.Instrument.GetType().Name,
-        BookGrouping.Tag => position.Tag.Length == 0 ? "(sans tag)" : position.Tag,
+        BookGrouping.Tag => position.Tag.Length == 0 ? "(no tag)" : position.Tag,
         BookGrouping.Source => position.Source,
         _ => "Book",
     };

@@ -4,40 +4,39 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Pricer.Book;
 using Pricer.Core;
-using Pricer.Data;
 using Pricer.Engines;
 using Pricer.Instruments;
 using Pricer.Market;
 using Pricer.Models;
 using Pricer.Risk;
 
-namespace Pricer.App.ViewModels;
+namespace Pricer.Presentation;
 
 public enum ProductKind
 {
-    OptionEuropeenne,
-    OptionAmericaine,
-    Digitale,
-    Barriere,
-    Asiatique,
+    EuropeanOption,
+    AmericanOption,
+    Digital,
+    Barrier,
+    Asian,
     ReverseConvertible,
     Autocall,
     Phoenix,
     WorstOf,
     Forward,
-    Action,
+    Stock,
 }
 
 public enum ModelKind
 {
     BlackScholes,
-    VolLocale,
+    LocalVol,
     Heston,
 }
 
 public enum EngineKind
 {
-    Analytique,
+    Analytic,
     Pde,
     MonteCarlo,
 }
@@ -45,16 +44,16 @@ public enum EngineKind
 /// <summary>Manual overrides, layered over the selected snapshot.</summary>
 public sealed record MarketInputs
 {
-    [Parameter("Spot", Group = "Marché", Min = 0.2, Max = 3, Relative = true)]
+    [Parameter("Spot", Group = "Market", Min = 0.2, Max = 3, Relative = true)]
     public double Spot { get; init; }
 
-    [Parameter("Décalage de vol", Group = "Marché", Unit = "abs", Min = -0.15, Max = 0.3)]
+    [Parameter("Vol shift", Group = "Market", Unit = "abs", Min = -0.15, Max = 0.3)]
     public double VolShift { get; init; }
 
-    [Parameter("Décalage du dividende", Group = "Marché", Unit = "abs", Min = -0.05, Max = 0.05)]
+    [Parameter("Dividend shift", Group = "Market", Unit = "abs", Min = -0.05, Max = 0.05)]
     public double DividendShift { get; init; }
 
-    [Parameter("Décalage de la courbe", Group = "Marché", Unit = "abs", Min = -0.03, Max = 0.03)]
+    [Parameter("Curve shift", Group = "Market", Unit = "abs", Min = -0.03, Max = 0.03)]
     public double RateShift { get; init; }
 
     public MarketSnapshot ApplyTo(MarketSnapshot snapshot, string underlying)
@@ -70,17 +69,17 @@ public sealed record MarketInputs
 
 public sealed record PositionInputs
 {
-    [Parameter("Quantité", Group = "Position", Min = -1000, Max = 1000)]
+    [Parameter("Quantity", Group = "Position", Min = -1000, Max = 1000)]
     public double Quantity { get; init; } = 1;
 }
 
 /// <summary>A simplified past for a trade in life: all past fixings at one level.</summary>
 public sealed record LifeInputs
 {
-    [Parameter("Niveau des fixings passés", Group = "Vie du trade", Unit = "× initial", Min = 0.2, Max = 2)]
+    [Parameter("Past fixings level", Group = "Trade lifecycle", Unit = "× initial", Min = 0.2, Max = 2)]
     public double PastLevel { get; init; } = 1;
 
-    [Parameter("Barrière déjà franchie", Group = "Vie du trade")]
+    [Parameter("Barrier already breached", Group = "Trade lifecycle")]
     public bool BarrierBreached { get; init; }
 
     public TradeState State(Instrument instrument, DateOnly asOf, Func<string, double> spot)
@@ -104,8 +103,24 @@ public sealed record LifeInputs
     };
 }
 
+/// <summary>Calculation defaults chosen by the host: a single-threaded browser needs lighter settings than the desktop.</summary>
+public sealed record PricerOptions
+{
+    public MonteCarloEngineConfig MonteCarlo { get; init; } = new();
+    public int ProfilePoints { get; init; } = 81;
+}
+
+/// <summary>A greek next to its bump-and-reprice control. When the two conventions differ (a local vol grid delta
+/// is a model greek, the bump a sticky-strike market greek), the gap measures smile dynamics, not an error.</summary>
 public sealed record GreekRow(
-    string Measure, double Value, double? Error, string Method, string Convention, double BumpValue, double Gap);
+    string Measure, double Value, double? Error, string Method, string Convention, double BumpValue, string BumpConvention, double Gap)
+{
+    public const string ConventionNote = "Different conventions: the gap is the effect of smile dynamics, not a numerical error.";
+
+    public bool SameConvention => Convention == BumpConvention;
+
+    public string GapNote => SameConvention ? "" : $"{Convention} vs {BumpConvention}";
+}
 
 public sealed record EngineRow(string Engine, double Pv, double? Error, double Milliseconds);
 
@@ -120,7 +135,6 @@ public sealed partial class PricerViewModel : ObservableObject
     private const int EngineForm = 4;
     private const int RiskForm = 5;
     private const int LifeForm = 6;
-    private const int ProfilePoints = 81;
     private const int PreviewDivisor = 16;
     private const int MinPreviewPaths = 1024;
     private const int PreviewBatches = 8;
@@ -132,30 +146,33 @@ public sealed partial class PricerViewModel : ObservableObject
 
     private static readonly Dictionary<Type, EngineKind> EngineKindOf = new()
     {
-        [typeof(AnalyticEngineConfig)] = EngineKind.Analytique,
+        [typeof(AnalyticEngineConfig)] = EngineKind.Analytic,
         [typeof(PdeEngineConfig)] = EngineKind.Pde,
         [typeof(MonteCarloEngineConfig)] = EngineKind.MonteCarlo,
     };
 
     private readonly EngineRegistry _registry = EngineRegistry.Default();
+    private readonly PricerOptions _options;
     private readonly RiskCalculator _risk;
     private HestonConfig _heston = new();
     private MarketSnapshot _snapshot;
     private string _underlying = SyntheticMarketDataProvider.DefaultUnderlying;
     private CancellationTokenSource? _pending;
 
-    [ObservableProperty] private ProductKind _productKind = ProductKind.OptionEuropeenne;
-    [ObservableProperty] private IReadOnlyList<ModelKind> _availableModels = [ModelKind.BlackScholes, ModelKind.VolLocale, ModelKind.Heston];
+    [ObservableProperty] private ProductKind _productKind = ProductKind.EuropeanOption;
+    [ObservableProperty] private IReadOnlyList<ModelKind> _availableModels = [ModelKind.BlackScholes, ModelKind.LocalVol, ModelKind.Heston];
     [ObservableProperty] private ModelKind _selectedModel = ModelKind.BlackScholes;
-    [ObservableProperty] private IReadOnlyList<EngineKind> _availableEngines = [EngineKind.Analytique, EngineKind.Pde, EngineKind.MonteCarlo];
-    [ObservableProperty] private EngineKind _selectedEngine = EngineKind.Analytique;
+    [ObservableProperty] private IReadOnlyList<EngineKind> _availableEngines = [EngineKind.Analytic, EngineKind.Pde, EngineKind.MonteCarlo];
+    [ObservableProperty] private EngineKind _selectedEngine = EngineKind.Analytic;
     [ObservableProperty] private string _pvText = "";
     [ObservableProperty] private string _marketLabel = "";
     [ObservableProperty] private string _status = "";
     [ObservableProperty] private bool _hasError;
+    [ObservableProperty] private bool _isBusy;
 
-    public PricerViewModel()
+    public PricerViewModel(PricerOptions? options = null)
     {
+        _options = options ?? new PricerOptions();
         _risk = new RiskCalculator(_registry);
         _snapshot = new SyntheticMarketDataProvider().GetSnapshot(DateOnly.FromDateTime(DateTime.Today));
         Forms = [];
@@ -190,14 +207,14 @@ public sealed partial class PricerViewModel : ObservableObject
         var state = ((LifeInputs)Forms[LifeForm].Record).State(instrument, _snapshot.AsOf, name => _snapshot.Underlying(name).Spot);
         var model = SelectedModel switch
         {
-            ModelKind.VolLocale => ModelChoice.LocalVol,
+            ModelKind.LocalVol => ModelChoice.LocalVol,
             ModelKind.Heston => ModelChoice.Heston,
             _ => ModelChoice.BlackScholes,
         };
         PositionRequested?.Invoke(new Position(
             $"L-{Guid.NewGuid():N}"[..10], instrument, ((PositionInputs)Forms[PositionForm].Record).Quantity,
             Tag: "Pricer", State: state, Model: model));
-        Status = "Ajouté au book.";
+        Status = "Added to the book.";
     }
 
     /// <summary>The calibrated parameters take over from the defaults for the Heston model.</summary>
@@ -242,7 +259,7 @@ public sealed partial class PricerViewModel : ObservableObject
         Schedule();
     }
 
-    private void UpdateMarketLabel() => MarketLabel = $"{_underlying} au {_snapshot.AsOf:dd/MM/yyyy}";
+    private void UpdateMarketLabel() => MarketLabel = $"{_underlying} as of {_snapshot.AsOf:yyyy-MM-dd}";
 
     private void Replace(int index)
     {
@@ -253,36 +270,36 @@ public sealed partial class PricerViewModel : ObservableObject
 
     private ParameterForm NewForm(int index) => index switch
     {
-        ProductForm => new("Produit", NewInstrument()),
+        ProductForm => new("Product", NewInstrument()),
         PositionForm => new("Position", new PositionInputs()),
-        MarketForm => new("Marché (surcharges)", new MarketInputs { Spot = _snapshot.Underlying(_underlying).Spot }),
-        ModelForm => new($"Modèle : {SelectedModel}", NewModel(SelectedModel)),
-        EngineForm => new($"Moteur : {SelectedEngine}", NewEngine(SelectedEngine)),
-        RiskForm => new("Risque", ProductKind >= ProductKind.ReverseConvertible && ProductKind <= ProductKind.WorstOf
+        MarketForm => new("Market (overrides)", new MarketInputs { Spot = _snapshot.Underlying(_underlying).Spot }),
+        ModelForm => new($"Model: {SelectedModel}", NewModel(SelectedModel)),
+        EngineForm => new($"Engine: {SelectedEngine}", NewEngine(SelectedEngine)),
+        RiskForm => new("Risk", ProductKind >= ProductKind.ReverseConvertible && ProductKind <= ProductKind.WorstOf
             ? new RiskConfig { SpotBump = NoteSpotBump }
             : new RiskConfig()),
-        LifeForm => new("Vie du trade", new LifeInputs()),
+        LifeForm => new("Trade lifecycle", new LifeInputs()),
         _ => throw new ArgumentOutOfRangeException(nameof(index)),
     };
 
     private static Type ModelType(ModelKind kind) => kind switch
     {
-        ModelKind.VolLocale => typeof(LocalVolConfig),
+        ModelKind.LocalVol => typeof(LocalVolConfig),
         ModelKind.Heston => typeof(HestonConfig),
         _ => typeof(BlackScholesConfig),
     };
 
     private ModelConfig NewModel(ModelKind kind) => kind switch
     {
-        ModelKind.VolLocale => new LocalVolConfig(),
+        ModelKind.LocalVol => new LocalVolConfig(),
         ModelKind.Heston => _heston,
         _ => new BlackScholesConfig(),
     };
 
-    private static EngineConfig NewEngine(EngineKind kind) => kind switch
+    private EngineConfig NewEngine(EngineKind kind) => kind switch
     {
         EngineKind.Pde => new PdeEngineConfig(),
-        EngineKind.MonteCarlo => new MonteCarloEngineConfig(),
+        EngineKind.MonteCarlo => _options.MonteCarlo,
         _ => new AnalyticEngineConfig(),
     };
 
@@ -299,24 +316,24 @@ public sealed partial class PricerViewModel : ObservableObject
         var start = _snapshot.AsOf;
         return ProductKind switch
         {
-            ProductKind.OptionEuropeenne => new EuropeanOption
+            ProductKind.EuropeanOption => new EuropeanOption
             {
                 Underlying = _underlying, Right = OptionRight.Call, Strike = strike, Expiry = expiry,
             },
-            ProductKind.OptionAmericaine => new AmericanOption
+            ProductKind.AmericanOption => new AmericanOption
             {
                 Underlying = _underlying, Right = OptionRight.Put, Strike = strike, Expiry = expiry,
             },
-            ProductKind.Digitale => new DigitalOption
+            ProductKind.Digital => new DigitalOption
             {
                 Underlying = _underlying, Right = OptionRight.Call, Strike = strike, Expiry = expiry,
             },
-            ProductKind.Barriere => new BarrierOption
+            ProductKind.Barrier => new BarrierOption
             {
                 Underlying = _underlying, Right = OptionRight.Call, Strike = strike, Expiry = expiry,
                 Barrier = Math.Round(0.8 * strike), Kind = BarrierKind.DownOut,
             },
-            ProductKind.Asiatique => new AsianOption
+            ProductKind.Asian => new AsianOption
             {
                 Underlying = _underlying, Right = OptionRight.Call, Strike = strike, Expiry = expiry,
                 AveragingStart = _snapshot.AsOf.AddMonths(1),
@@ -340,7 +357,7 @@ public sealed partial class PricerViewModel : ObservableObject
                     .Select(n => new BasketLeg(n, _snapshot.Underlying(n).Spot))],
             },
             ProductKind.Forward => new EquityForward { Underlying = _underlying, Strike = strike, Expiry = expiry },
-            ProductKind.Action => new Stock { Underlying = _underlying },
+            ProductKind.Stock => new Stock { Underlying = _underlying },
             _ => throw new InvalidOperationException(),
         };
     }
@@ -365,10 +382,11 @@ public sealed partial class PricerViewModel : ObservableObject
         string underlying = _underlying;
         var others = AvailableEngines.Where(e => e != SelectedEngine).Select(NewEngine).ToArray();
 
+        IsBusy = true;
         try
         {
             await Task.Delay(Debounce, token);
-            var output = await Task.Run(() => Calculate(request, config, underlying, others, token), token);
+            var output = await Task.Run(() => CalculateAsync(request, config, underlying, others, token), token);
             Show(output);
         }
         catch (OperationCanceledException)
@@ -379,14 +397,21 @@ public sealed partial class PricerViewModel : ObservableObject
             HasError = true;
             Status = e.Message;
         }
+        finally
+        {
+            // A newer edit owns the flag once it has started.
+            if (_pending == pending) IsBusy = false;
+        }
     }
 
-    private Output Calculate(
+    /// <summary>Yields between reprices: in a single-threaded browser this lets the page redraw and a new edit cancel the run.</summary>
+    private async Task<Output> CalculateAsync(
         PricingRequest request, RiskConfig config, string underlying, EngineConfig[] others, CancellationToken token)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var best = _risk.Compute(request, config);
         double bestTime = watch.Elapsed.TotalMilliseconds;
+        await Task.Yield();
         token.ThrowIfCancellationRequested();
         // When every greek already comes from bumping, the control would only repeat the calculation.
         var bumped = best.Greeks.All(g => g.Method == GreekMethod.BumpReprice)
@@ -394,14 +419,16 @@ public sealed partial class PricerViewModel : ObservableObject
             : _risk.Compute(request, config with { Preference = GreekPreference.ForceBump });
 
         double spot = request.Market.Underlying(underlying).Spot;
-        var spots = new double[ProfilePoints];
-        var values = new double[ProfilePoints];
+        int points = _options.ProfilePoints;
+        var spots = new double[points];
+        var values = new double[points];
         var pvOnly = request with { Measures = [] };
         var preview = pvOnly with { Engine = Preview(request.Engine) };
-        for (int i = 0; i < ProfilePoints; i++)
+        for (int i = 0; i < points; i++)
         {
+            await Task.Yield();
             token.ThrowIfCancellationRequested();
-            double relative = -0.5 + i / (ProfilePoints - 1.0);
+            double relative = -0.5 + i / (points - 1.0);
             spots[i] = spot * (1 + relative);
             var shifted = new SpotBump(underlying, relative).Apply(request.Market);
             values[i] = _risk.Compute(preview with { Market = shifted }, config).Pv;
@@ -411,6 +438,7 @@ public sealed partial class PricerViewModel : ObservableObject
         engines.Add(new EngineRow(best.Engine, best.Pv, best.PvStandardError, bestTime));
         foreach (var other in others)
         {
+            await Task.Yield();
             token.ThrowIfCancellationRequested();
             var timer = System.Diagnostics.Stopwatch.StartNew();
             var result = _risk.Compute(pvOnly with { Engine = other }, config);
@@ -427,16 +455,16 @@ public sealed partial class PricerViewModel : ObservableObject
             ? $"{output.Best.Pv:N4} ± {error:N4}"
             : output.Best.Pv.ToString("N4");
         HasError = false;
-        string realised = output.Best.Realised == 0 ? "" : $" · déjà versé {output.Best.Realised:N2}";
+        string realised = output.Best.Realised == 0 ? "" : $" · already paid {output.Best.Realised:N2}";
         Status = $"{output.Best.Engine} · {output.Elapsed.TotalMilliseconds:F1} ms · hash {output.Hash[..12]}{realised}";
 
         Greeks.Clear();
         foreach (var greek in output.Best.Greeks)
         {
-            double bump = output.Bumped.Greek(greek.Measure, greek.Underlying)!.Value;
+            var bump = output.Bumped.Greek(greek.Measure, greek.Underlying)!;
             Greeks.Add(new GreekRow(
                 $"{greek.Measure} {greek.Underlying}".TrimEnd(), greek.Value, greek.StandardError, greek.Method.ToString(), greek.Convention.ToString(),
-                bump, greek.Value - bump));
+                bump.Value, bump.Convention.ToString(), greek.Value - bump.Value));
         }
 
         Engines.Clear();
